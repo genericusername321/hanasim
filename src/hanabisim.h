@@ -25,6 +25,9 @@ enum class ClueType {colour, rank};
 enum Color {purple, blue, green, yellow, red};
 enum Rank {one, two, three, four, five};
 
+inline int operator++(const Color& c) {return (c+1);}
+inline int operator++(const Rank& r) {return (r+1);}
+
 
 
 class Card;
@@ -64,13 +67,15 @@ class Card {
 
 class cardHasher {
     public:
-        std::size_t operator()(const Card& c) const {
+        std::size_t operator()(const Card& card) const {
             using std::size_t;
             using std::hash;
 
             // As colour is in [1..5], rank in [1..5], the combination
             // 10*colour + rank is unique for every card.
-            int keyVal = 10*c.colour + c.rank;
+            int c = static_cast<int>(card.colour);
+            int r = static_cast<int>(card.rank);
+            int keyVal = 10*c + r;
 
             return (hash<int>()(keyVal));
         }
@@ -181,6 +186,7 @@ class GameState {
                 return;
             }
 
+
             return;
         }
 
@@ -189,12 +195,19 @@ class GameState {
     private:
         void initCardCounts() {
 
-            for (int colour = 1; colour <= nColours; colour++) {
-                for (int rank = 1; rank <= nRanks; rank++) {
-                    Card c(colour, rank);
-                    cardCounts[c] = 0;
+            for (int c = purple; c <= red; c++) {
+                for (int r = one; r <= five; r++) {
+                    Card card(c, r);
+                    cardCounts[card] = 0;
                 }
             }
+
+            //for (int colour = 1; colour <= nColours; colour++) {
+            //    for (int rank = 1; rank <= nRanks; rank++) {
+            //        Card c(colour, rank);
+            //        cardCounts[c] = 0;
+            //    }
+            //}
 
             return;
         }
@@ -219,16 +232,16 @@ class GameState {
 
         void createDeck() {
             std::vector<Card> newDeck;
-            for (int colour = 1; colour <= nColours; colour++) {
-                for (int rank = 1; rank <= nRanks; rank++) {
+            for (int colour = purple; colour <= red; colour++) {
+                for (int rank = one; rank <= five; rank++) {
 
                     int d = 0;
                     switch (rank) {
-                        case 1: d = 3; break;
-                        case 2: d = 2; break;
-                        case 3: d = 2; break;
-                        case 4: d = 2; break;
-                        case 5: d = 1; break;
+                        case one: d = 3; break;
+                        case two: d = 2; break;
+                        case three: d = 2; break;
+                        case four: d = 2; break;
+                        case five: d = 1; break;
                     }
 
                     for (int i = 0; i < d; i++) {

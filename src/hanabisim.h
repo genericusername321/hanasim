@@ -15,6 +15,7 @@
 
 const int MAXHINTS = 8;
 const int MAXSTRIKES = 3;
+const int STARTINGHINTS = 8;
 
 // actions player can perform during their turn
 enum class MoveType {clue, play, discard};
@@ -22,19 +23,16 @@ enum class MoveType {clue, play, discard};
 // types of clues a player can give
 enum class ClueType {colour, rank};
 
-enum Color {purple, blue, green, yellow, red};
-enum Rank {one, two, three, four, five};
+const std::vector<int> VALUES = {1,2,3,4,5};
+const std::vector<std::string> COLOURS = {"P", "B", "G", "Y", "R"};
 
-inline int operator++(const Color& c) {return (c+1);}
-inline int operator++(const Rank& r) {return (r+1);}
-
-
+typedef int Value;
+typedef std::string Colour;
 
 class Card;
 
 typedef int Player;
 typedef std::vector<Card> Hand;
-typedef std::vector<Card> Pile;
 typedef std::vector<Card> Deck;
 
 
@@ -61,8 +59,13 @@ class Card {
         }
 
         bool operator!=(const Card& rhs) const{
-            return (*this == rhs);
+            return !(*this == rhs);
         }
+};
+
+struct Pile {
+    std::vector<Card> pile;
+    Colour colour;
 };
 
 class cardHasher {
@@ -88,7 +91,6 @@ class GameState {
         int nHints;     // number of hints 
         int nStrikes;   // number of strikes
 
-
         Deck deck;
         std::vector<Hand> hands;
         std::vector<Pile> piles;
@@ -104,13 +106,15 @@ class GameState {
     public:
         GameState() {
             
+            // handle administrative
             nColours = NCOLOR;
             nRanks = NRANK;
             rSeed = 0;
 
-            nHints = 8;
+            nHints = STARTINGHINTS;
             nStrikes = 0;
 
+            // set up hands depending on number of players
             nPlayers = 5;
             switch (nPlayers) {
                 case 2: nHand = 5; break;
@@ -125,11 +129,15 @@ class GameState {
             createDeck();
             shuffleDeck(rSeed);
 
+            createPiles();
+
             for (int i = 0; i < nPlayers; i++) {
                 Hand h;
                 hands.push_back(h);
             }
             dealHands();
+
+            return;
         }
 
         void showCardCounts() {
@@ -160,6 +168,15 @@ class GameState {
             return;
         }
 
+        void showPiles() {
+            std::cout << "There are " << piles.size() << " piles." << std::endl;
+            for (auto pile : piles) {
+                std::cout << pile.colour << std::endl;
+            }
+
+            return;
+        }
+
         void discard(Player p, int i) {
             /* Discard card at index i in player p's hand */
 
@@ -174,25 +191,24 @@ class GameState {
             return;
         }
 
-        void play(Player p, int i, int j) {
+        void play(Player p, Card card, Pile pile) {
             /* Attempt to play card i of player p's hand onto pile j */
 
-            Card toPlay = hands[p][i];
-
-            // Check if card is of the right colour
-            if (toPlay.colour != j+1) {
-                discard(p, i);
-                nStrikes++;
-                return;
-            }
-
-
-            return;
         }
 
 
 
     private:
+        void createPiles() {
+
+            // create a pile for each colour
+            for (Colour c = purple; c <= red; ++c) {
+                Pile p;
+                p.colour = c;
+                piles.push_back(p);
+            }
+        }
+
         void initCardCounts() {
 
             for (int c = purple; c <= red; c++) {
@@ -201,13 +217,6 @@ class GameState {
                     cardCounts[card] = 0;
                 }
             }
-
-            //for (int colour = 1; colour <= nColours; colour++) {
-            //    for (int rank = 1; rank <= nRanks; rank++) {
-            //        Card c(colour, rank);
-            //        cardCounts[c] = 0;
-            //    }
-            //}
 
             return;
         }

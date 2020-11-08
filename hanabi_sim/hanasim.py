@@ -47,8 +47,6 @@ class Card:
     def __init__(self, colour, value):
         self.colour = colour
         self.value = value
-        self.vColour = None
-        self.vValue = None
 
     def __eq__(self, other):
         if ((self.colour == other.colour) and (self.value == other.value)):
@@ -61,16 +59,6 @@ class Card:
 
     def asString(self):
         return '{}{}'.format(self.colour, self.value)
-
-    def view(self):
-        colour = '?'
-        value = '?'
-        if self.vColour:
-            colour = self.vColour
-
-        if self.vValue:
-            value = self.vValue
-        return '{}{}'.format(colour, value)
 
 class Pile:
 
@@ -114,11 +102,6 @@ class Hint:
         self.type = type
         self.value = value
 
-class Player:
-    """
-    Class to track the data available to a player.
-    """
-
 class GameState:
 
     def __init__(self, nPlayers=4, seed=0, deck=None):
@@ -134,12 +117,14 @@ class GameState:
         assert (nPlayers <= MAXPLAYERS)
         assert (isinstance(seed, int))
 
+        self.nHints = MAXHINTS
+        self.strikes = 0
+        self.score = 0
+
         self.nPlayers = nPlayers
         self.rSeed = seed
         self.deck = deck
 
-        self.nHints = MAXHINTS
-        self.strikes = 0
 
         # setup player hands
         self.hands = [[] for _ in range(self.nPlayers)]
@@ -182,6 +167,7 @@ class GameState:
         # Check that this is a legal move
         card = self.hands[playerID][idx]
         if pile.getNextCard() == card:
+            self.score += 1
             self.hands[playerID].remove(card)
             pile.pile.append(card)
             logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))

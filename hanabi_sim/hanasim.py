@@ -19,11 +19,11 @@ logger.addHandler(fh)
 
 # Constants
 MINPLAYERS = 2
-MAXPLAYERS = 4
+MAXPLAYERS = 5
 COLOURS = ['R', 'G', 'B', 'Y', 'P']
 VALUES = [1, 2, 3, 4, 5]
 MAXHINTS = 8
-STRIKES = 3
+MAXSTRIKES = 3
 
 # Number of duplicates of a card with a particular value in a fresh deck
 CARDCOUNTS = {1: 3,
@@ -38,16 +38,39 @@ HANDSIZE = {2: 5,
             4: 4,
             5: 4}
 
-
-def cardAsString(card):
+class Card:
     """
-    Converts a card to printable string format for logging
-    :param card: a tuple of the form (colour, value)
-    :return: a string, e.g. "B5" for a card ('B', 5)
+    A class that models a Hanabi card. It contains the colour and value of
+    the card, as well as hints that apply to it.
     """
 
-    return '{}{}'.format(card[0], card[1])
+    def __init__(self, colour, value):
+        self.colour = colour
+        self.value = value
+        self.vColour = None
+        self.vValue = None
 
+    def __eq__(self, other):
+        if ((self.colour == other.colour) and (self.value == other.value)):
+            return True
+        else:
+            return False
+
+    def __hash__(self):
+        return hash((self.colour, self.value))
+
+    def asString(self):
+        return '{}{}'.format(self.colour, self.value)
+
+    def view(self):
+        colour = '?'
+        value = '?'
+        if self.vColour:
+            colour = self.vColour
+
+        if self.vValue:
+            value = self.vValue
+        return '{}{}'.format(colour, value)
 
 class Pile:
 
@@ -60,7 +83,7 @@ class Pile:
         Gets the colour and value of the next card to go on the pile
         :return: tuple: (colour, value)
         """
-        nextCard = (self.colour, len(self.pile)+1)
+        nextCard = Card(self.colour, len(self.pile)+1)
         return nextCard
 
     def getTopCard(self):
@@ -121,7 +144,7 @@ class GameState:
         # setup player hands
         self.hands = [[] for _ in range(self.nPlayers)]
 
-        # setup mapping of disc
+        # keep track of number of discarded cards for each type
         self.discarded = {}
 
         # initialise piles as dictionary, taking colours as keys
@@ -161,29 +184,30 @@ class GameState:
         if pile.getNextCard() == card:
             self.hands[playerID].remove(card)
             pile.pile.append(card)
-            logger.info('Player {} successfully plays {}'.format(playerID, cardAsString(card)))
-            if card[1] == 5:
+            logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
+            if card.value == 5:
                 self.addHint()
         else:
             self.strikes += 1
-            logger.info('Player {} fails to play {}. {} strikes'.format(playerID, cardAsString(card), self.strikes))
-            self.discard(playerID, card, False)
+            logger.info('Player {} fails to play {}. {} strikes'.format(
+                playerID, card.asString(), self.strikes))
+            self.discard(playerID, idx, False)
 
-    def discard(self, playerID, card, ismove):
+    def discard(self, playerID, index, ismove=True):
         """
         Discard a card from a player's hand, then draw a new card from the deck.
         :param playerID: integer
-        :param card: a tuple (c,v) representing a card
+        :param index: the index of the card to be discarded
         :param ismove: boolean indicating whether this is a voluntary move,
-        gaining a hint, or a forced discard.
+        gaining a hint, or a forced discard, netting no hint
         :return:
         """
-        self.hands[playerID].remove(card)
+        card = self.hands[playerID].pop(index)
         if card in self.discarded:
             self.discarded[card] += 1
         else:
             self.discarded[card] = 1
-        logger.info('Player {} discarded {}'.format(playerID, cardAsString(card)))
+        logger.info('Player {} discarded {}'.format(playerID, card.asString()))
         logger.debug('Discard pile: {}'.format(self.discarded))
         self.drawCard(playerID)
 
@@ -199,7 +223,7 @@ class GameState:
         if (self.deck):
             card = self.deck.pop()
             self.hands[playerID].append(card)
-            logger.info(f'player {playerID} draws {cardAsString(card)}')
+            logger.info(f'player {playerID} draws {card.asString()}')
 
     def addHint(self):
         """
@@ -215,6 +239,7 @@ class GameState:
         """
         Setup the game by:
             - Creating a sorted deck
+            - Setup discarded pile
             - Dealing hands
         :return:
         """
@@ -224,15 +249,18 @@ class GameState:
             self.createDeck()
             self.shuffleDeck()
 
+        # Setup pile of discarded cards
+        self.setupDiscardedPile()
+
         # Deal from deck into hands
         self.dealHands()
 
     def createDeck(self):
         """
-        Creates an deck of cards
+        Creates a deck of cards
         :return:
         """
-        self.deck = [(colour, value) for colour in COLOURS
+        self.deck = [Card(colour, value) for colour in COLOURS
                      for value in VALUES for _ in range(CARDCOUNTS[value])]
         logger.info('Creating deck...')
 
@@ -253,3 +281,17 @@ class GameState:
         for i in range(HANDSIZE[self.nPlayers]):
             for player in range(self.nPlayers):
                 self.drawCard(player)
+
+    def setupDiscardedPile(self):
+        """
+        Setup the discarded pile
+        :return:
+        """
+
+        cards = [Card(colour, value) for colour in COLOURS
+                for value in VALUES]
+
+        for card in cards:
+            self.discarded[card] = 0
+
+

@@ -129,4 +129,3 @@ def test_play_succeed(snapshot):
     snapshot.assert_match(game.deck)
     snapshot.assert_match(game.hands[playerId])
 
-

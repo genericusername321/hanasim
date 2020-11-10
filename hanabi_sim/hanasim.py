@@ -158,7 +158,7 @@ class GameState:
 
     def playCard(self, playerID, idx, pile):
         """
-        Player a card from playerIDs hand onto a pile
+        Player a card from playerIDs hand onko a pile
         :param playerID: integer in range [0, nPlayers-1]
         :param idx: index of the card to play, in the player's hand
         :param pile: a Pile
@@ -177,17 +177,15 @@ class GameState:
             self.strikes += 1
             logger.info('Player {} fails to play {}. {} strikes'.format(
                 playerID, card.asString(), self.strikes))
-            self.discard(playerID, idx, False)
+            self.forcedDiscard(playerID, idx)
 
-    def discard(self, playerID, index, ismove=True):
+    def forcedDiscard(self, playerID, index):
         """
-        Discard a card from a player's hand, then draw a new card from the deck.
+        Discard a card from a player's hand without awarding a hint.
         :param playerID: integer
         :param index: the index of the card to be discarded
-        :param ismove: boolean indicating whether this is a voluntary move,
-        gaining a hint, or a forced discard, netting no hint
-        :return:
         """
+
         card = self.hands[playerID].pop(index)
         if card in self.discarded:
             self.discarded[card] += 1
@@ -197,8 +195,15 @@ class GameState:
         logger.debug('Discard pile: {}'.format(self.discarded))
         self.drawCard(playerID)
 
-        if ismove:
-            self.addHint()
+    def discard(self, playerID, index):
+        """
+        Discard a card from a player's hand, then draw a new card from the deck.
+        :param playerID: integer
+        :param index: the index of the card to be discarded
+        :return:
+        """
+        self.addHint()
+        self.forcedDiscard(playerID, index)
 
     def drawCard(self, playerID):
         """

@@ -4,11 +4,13 @@ import pytest
 def test_init():
 
     nPlayers = 4
+    handSize = 4
     seed = 0
 
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
 
     assert game.nPlayers == nPlayers
+    assert game.handSize == handSize
     assert game.nHints == 8
     assert game.strikes == 0
     assert game.score == 0
@@ -16,33 +18,35 @@ def test_init():
 def test_init_exception():
 
     nPlayersLow = 1
+    handSize = 4
     seed = 0
 
     with pytest.raises(AssertionError):
-        game = GameState(nPlayersLow, seed)
+        game = GameState(nPlayersLow, handSize, seed)
     
     nPlayersHigh = 6
     with pytest.raises(AssertionError):
-        game = GameState(nPlayersHigh, seed)
+        game = GameState(nPlayersHigh, handSize, seed)
 
 def test_setup(snapshot):
 
     nPlayers = 4
-    nCardsHand = 4
+    handSize = 4
     seed = 0
 
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
     game.setup()
 
     snapshot.assert_match(game.deck)
     assert len(game.hands) == nPlayers
-    assert len(game.hands[0]) == nCardsHand
+    assert len(game.hands[0]) == handSize
 
 def test_discard_fullhints(snapshot):
 
     nPlayers = 4
+    handSize = 4
     seed = 0
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
     game.setup()
 
     playerId = 0
@@ -58,8 +62,9 @@ def test_discard_fullhints(snapshot):
 def test_discard_addhint(snapshot):
 
     nPlayers = 2
+    handSize = 5
     seed = 0
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
     game.setup()
 
     game.nHints = 0
@@ -74,8 +79,9 @@ def test_discard_addhint(snapshot):
 
 def test_forced_discard(snapshot):
     nPlayers = 2
+    handSize = 5
     seed = 0
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
     game.setup()
 
     game.nHints = 0
@@ -88,8 +94,9 @@ def test_forced_discard(snapshot):
 def test_play_fail(snapshot):
 
     nPlayers = 2
+    handSize = 5
     seed = 0
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
     game.setup()
 
     game.nHints = 0
@@ -105,13 +112,15 @@ def test_play_fail(snapshot):
     assert game.strikes == 1            # Verify that a strike has been counted
     assert game.nHints == 0             # Verify that no hint was awarded
     assert game.score == 0              # Verify that no score was counted
-    assert pile.getTopCard() == None    # Verify that card was not played
+    assert pile.getTopCard() is None    # Verify that card was not played
+    assert len(game.hands[0]) == 5
 
 def test_play_succeed(snapshot):
 
     nPlayers = 2
+    handSize = 5
     seed = 0
-    game = GameState(nPlayers, seed)
+    game = GameState(nPlayers, handSize, seed)
     game.setup()
 
     game.nHints = 0
@@ -126,6 +135,8 @@ def test_play_succeed(snapshot):
 
     assert game.score == 1              # Verify that score was counted
     assert pile.getNextCard() == nextCard
+    assert len(game.hands[0]) == 5
     snapshot.assert_match(game.deck)
     snapshot.assert_match(game.hands[playerId])
+
 

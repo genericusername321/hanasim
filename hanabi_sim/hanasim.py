@@ -86,45 +86,89 @@ class Pile:
 
         return topCard
 
+    def addCard(self, card):
+        """
+        Attempt to play the card on top of this pile.
+        :param card: card to be played on this pile
+        :return:        Boolean value signifying the whether it the attempt is 
+                        successful or not.
+        """
+        nextCard = self.getNextCard()
+        if nextCard == card:
+            self.pile.append(card)
+            return True
+        else:
+            return False
+
 class Hint:
     """
     Represents a hint given from one player to another.
     """
 
-    def __init__(self, player, type, value):
-        assert(type in ['colour', 'value'])
-        if type == 'colour':
-            assert(value in COLOURS)
-        else:
-            assert(value in VALUES)
-
+    def __init__(self, playerID, value):
+        """
+        :param player:  integer representing the receiving player
+        :param value:   integer or char representing the hint value. Must be a 
+                        in VALUE or COLOURS
+        """
+        assert(value in COLOURS or value in VALUES)
         self.player = player
-        self.type = type
+        self.value = value
+
+class Move:
+    """
+    Represents a move performed by a player in a single turn.
+    """
+
+    def __init__(self, turn, playerID, moveType, value):
+        """
+        :param turn:    integer representing the turn this move was played
+        :param playerID: integer, representing the player
+        :param moveType: string, can be play / hint / discard
+        :param value: Value of the move. Can be a card or a hint.
+        """
+        allowedMoveTypes = ['play', 'hint', 'discard']
+
+        assert(isinstance(turn, int))
+        assert(isinstance(playerID, int))
+        assert(moveType in allowedMoveTypes)
+        assert(isinstance(value, Card) or isinstance(value, Hint))
+
+        self.turn = turn
+        self.player = playerID
+        self.moveType = moveType
         self.value = value
 
 class GameState:
 
-    def __init__(self, nPlayers=4, seed=0, deck=None):
+    def __init__(self, nPlayers, handSize, seed=0, deck=None):
         """
         Constructor for the gamestate class
         :param nPlayers: integer in the range [MINPLAYERS, MAXPLAYERS], the number of
                         players in the game
+        :param handSize: number of cards in each player's hand
         :param seed: optional parameter, seed for the rng to shuffle the deck
         :param deck: optional parameter, a deck of cards as a list of tuples
                     (colour, value)
         """
         assert (nPlayers >= MINPLAYERS)
         assert (nPlayers <= MAXPLAYERS)
+        assert (isinstance(handSize, int))
+        assert (handSize > 0)
         assert (isinstance(seed, int))
+
 
         self.nHints = MAXHINTS
         self.strikes = 0
         self.score = 0
 
+        self.turn = 0
+        self.playerTurn = 0
+
         self.nPlayers = nPlayers
+        self.handSize = handSize
         self.rSeed = seed
         self.deck = deck
-
 
         # setup player hands
         self.hands = [[] for _ in range(self.nPlayers)]
@@ -136,8 +180,6 @@ class GameState:
         self.piles = {}
         for colour in COLOURS:
             self.piles[colour] = Pile(colour)
-
-        self.hints = []
 
     def playHint(self, hintFrom, hintTo, hint):
         """
@@ -166,10 +208,10 @@ class GameState:
         """
         # Check that this is a legal move
         card = self.hands[playerID][idx]
-        if pile.getNextCard() == card:
+        if pile.addCard(card):
             self.score += 1
             self.hands[playerID].remove(card)
-            pile.pile.append(card)
+            self.drawCard(playerID)
             logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
             if card.value == 5:
                 self.addHint()

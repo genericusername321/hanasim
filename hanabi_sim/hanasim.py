@@ -1,4 +1,5 @@
 """
+
 hanasim is a simulator for the card game Hanabi.
 """
 
@@ -32,11 +33,6 @@ CARDCOUNTS = {1: 3,
               4: 2,
               5: 1}
 
-# Number of cards each player has in their hand
-HANDSIZE = {2: 5,
-            3: 5,
-            4: 4,
-            5: 4}
 
 class Card:
     """
@@ -311,7 +307,7 @@ class GameState:
         Deal initial hands
         :return:
         """
-        for i in range(HANDSIZE[self.nPlayers]):
+        for i in range(self.handSize):
             for player in range(self.nPlayers):
                 self.drawCard(player)
 

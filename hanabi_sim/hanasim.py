@@ -177,23 +177,6 @@ class GameState:
         for colour in COLOURS:
             self.piles[colour] = Pile(colour)
 
-    def playHint(self, hintFrom, hintTo, hint):
-        """
-        Player hintFrom hints player hintTo
-        :param hintFrom: integer in [0, nPlayers - 1]
-        :param hintTo: integer in [0, nPlayers - 1]
-        :param hint: Hint object
-        :return:
-        """
-
-        # Check that we have sufficient number of hints left
-        if self.nHints < 1:
-            return
-
-        self.nHints -= 1
-        self.hints.append(hint)
-        logger.info('Player {} hints {} to player {}'.format(hintFrom, hint.value, hintTo))
-
     def playCard(self, playerID, idx, pile):
         """
         Player a card from playerIDs hand onko a pile
@@ -202,12 +185,16 @@ class GameState:
         :param pile: a Pile
         :return:
         """
-        # Check that this is a legal move
+        # Check that the index refers to a valid card
+        assert (idx < len(self.hands[playerID]))
+
+        # Pop the card from the player hand
         card = self.hands[playerID][idx]
-        if pile.addCard(card):
-            self.score += 1
-            self.hands[playerID].remove(card)
+        playedSuccess = pile.addCard(card)
+        if playedSuccess:
+            self.hands[playerID].pop(idx)
             self.drawCard(playerID)
+            self.score += 1
             logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
             if card.value == 5:
                 self.addHint()
@@ -216,6 +203,7 @@ class GameState:
             logger.info('Player {} fails to play {}. {} strikes'.format(
                 playerID, card.asString(), self.strikes))
             self.forcedDiscard(playerID, idx)
+
 
     def forcedDiscard(self, playerID, index):
         """
@@ -230,7 +218,7 @@ class GameState:
         else:
             self.discarded[card] = 1
         logger.info('Player {} discarded {}'.format(playerID, card.asString()))
-        logger.debug('Discard pile: {}'.format(self.discarded))
+        logger.info('Discard pile: {}'.format(self.discarded))
         self.drawCard(playerID)
 
     def discard(self, playerID, index):

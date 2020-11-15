@@ -20,6 +20,8 @@ logger.addHandler(fh)
 # Constants
 MINPLAYERS = 2
 MAXPLAYERS = 5
+MINHAND = 4 
+MAXHAND = 5
 COLOURS = ['R', 'G', 'B', 'Y', 'P']
 VALUES = [1, 2, 3, 4, 5]
 MAXHINTS = 8
@@ -53,6 +55,9 @@ class Card:
         return hash((self.colour, self.value))
 
     def asString(self):
+        return '{}{}'.format(self.colour, self.value)
+
+    def __repr__(self):
         return '{}{}'.format(self.colour, self.value)
 
 class Firework:
@@ -110,21 +115,33 @@ class Hint:
         self.playerID = receivingPlayerID
         self.value = value
 
+class PlayCard:
+
+    def __init__(self, index, colour):
+
+        assert (isinstance(index, integer))
+        assert (colour in COLOURS)
+
+        self.index = index
+        self.colour = colour
+
 class Move:
     """
     Represents a move performed by a player in a single turn.
     """
     
-    def __init__(self, playerID, moveType, value):
+    def __init__(self, playerID, moveType, moveDescription):
 
         allowedMoveTypes = ['DISCARD', 'PLAY', 'HINT']
         assert (isinstance(playerID, int))
         assert (moveType in allowedMoveTypes)
-        assert (isinstance(value, int) or isinstance(value, Hint))
+        assert (isinstance(value, int) or 
+                isinstance(value, Hint) or
+                isinstance(value, PlayCard))
 
         self.playerID = playerID
         self.moveType = moveType
-        self.value = value
+        self.moveDescription = value
 
 class GameState:
 
@@ -138,10 +155,12 @@ class GameState:
         :param deck: optional parameter, a deck of cards as a list of tuples
                     (colour, value)
         """
+        assert (isinstance(nPlayers, int))
         assert (nPlayers >= MINPLAYERS)
         assert (nPlayers <= MAXPLAYERS)
         assert (isinstance(handSize, int))
-        assert (handSize > 0)
+        assert (handSize >= MINHAND)
+        assert (handSize <= MAXHAND)
         assert (isinstance(seed, int))
 
 
@@ -157,13 +176,16 @@ class GameState:
         self.rSeed = seed
         self.deck = deck
 
-        # setup player hands
+        # List of moves
+        self.moveHistory = []
+
+        # Player hands
         self.hands = [[] for _ in range(self.nPlayers)]
 
-        # keep track of number of discarded cards for each type
+        # Discard pile
         self.discarded = {}
 
-        # initialise piles as dictionary, taking colours as keys
+        # Fireworks
         self.fireworks = {}
         for colour in COLOURS:
             self.fireworks[colour] = Firework(colour)
@@ -171,7 +193,7 @@ class GameState:
     def doMove(self, move):
         """
         Perform a player move
-        :param move: object of type Move
+        :param move: object of class Move
         """
 
         assert (isinstance(move, Move))
@@ -179,14 +201,20 @@ class GameState:
         
         # Resolve move depending on movetype
         if moveType == 'DISCARD':
-            self.discard(move.playerID, move.value)
+            self.discard(move.playerID, move.moveDescription)
         elif moveType == 'PLAY':
-            pass 
+            self.playCard(move.playerID, move.moveDescription.index, move.moveDescription.colour)
         elif moveType == 'HINT':
             pass
         else:
             raise ValueError('Illegal move type')
 
+        self.moveHistory.append(move)
+
+    def getView(self, playerID):
+        """
+        Give a player their view of the board
+        """
 
     def playCard(self, playerID, idx, colour):
         """
@@ -248,6 +276,8 @@ class GameState:
         :param playerID: an integer in the range [0, nPlayers-1]
         :return:
         """
+        assert(len(self.hands[playerID]) < self.handSize)
+
         if (self.deck):
             card = self.deck.pop()
             self.hands[playerID].append(card)

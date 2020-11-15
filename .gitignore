@@ -1,4 +1,2 @@
 *.log
 *.pyc
-hanabi_sim/__pycache__/
-hanabi_sim/__tests__/unit/snapshots/__pycache__/

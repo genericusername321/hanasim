@@ -1,5 +1,4 @@
 """
-
 hanasim is a simulator for the card game Hanabi.
 """
 
@@ -108,29 +107,22 @@ class Hint:
                         in VALUE or COLOURS
         """
         assert(value in COLOURS or value in VALUES)
-        self.player = receivingPlayerID
+        self.playerID = receivingPlayerID
         self.value = value
 
 class Move:
     """
     Represents a move performed by a player in a single turn.
     """
+    
+    def __init__(self, playerID, moveType, value):
 
-    def __init__(self, turn, playerID, moveType, value):
-        """
-        :param turn:    integer representing the turn this move was played
-        :param playerID: integer, representing the player
-        :param moveType: string, can be play / hint / discard
-        :param value: Value of the move. Can be a card or a hint.
-        """
-        allowedMoveTypes = ['play', 'hint', 'discard']
-        assert(isinstance(turn, int))
-        assert(isinstance(playerID, int))
-        assert(moveType in allowedMoveTypes)
-        assert(isinstance(value, Card) or isinstance(value, Hint))
+        allowedMoveTypes = ['DISCARD', 'PLAY', 'HINT']
+        assert (isinstance(playerID, int))
+        assert (moveType in allowedMoveTypes)
+        assert (isinstance(value, int) or isinstance(value, Hint))
 
-        self.turn = turn
-        self.player = playerID
+        self.playerID = playerID
         self.moveType = moveType
         self.value = value
 
@@ -172,16 +164,36 @@ class GameState:
         self.discarded = {}
 
         # initialise piles as dictionary, taking colours as keys
-        self.piles = {}
+        self.fireworks = {}
         for colour in COLOURS:
-            self.piles[colour] = Firework(colour)
+            self.fireworks[colour] = Firework(colour)
 
-    def playCard(self, playerID, idx, firework):
+    def doMove(self, move):
+        """
+        Perform a player move
+        :param move: object of type Move
+        """
+
+        assert (isinstance(move, Move))
+        moveType = move.moveType
+        
+        # Resolve move depending on movetype
+        if moveType == 'DISCARD':
+            self.discard(move.playerID, move.value)
+        elif moveType == 'PLAY':
+            pass 
+        elif moveType == 'HINT':
+            pass
+        else:
+            raise ValueError('Illegal move type')
+
+
+    def playCard(self, playerID, idx, colour):
         """
         Player a card from playerIDs hand onko a pile
         :param playerID: integer in range [0, nPlayers-1]
         :param idx: index of the card to play, in the player's hand
-        :param firework: a Firework to play the card on
+        :param firework: a colour firework to play the card on
         :return:
         """
         # Check that the index refers to a valid card
@@ -189,7 +201,7 @@ class GameState:
 
         # Pop the card from the player hand
         card = self.hands[playerID][idx]
-        playedSuccess = firework.addCard(card)
+        playedSuccess = self.fireworks[colour].addCard(card)
         if playedSuccess:
             self.hands[playerID].pop(idx)
             self.drawCard(playerID)

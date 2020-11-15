@@ -118,9 +118,10 @@ def test_play_fail(snapshot):
     game.nHints = 0
     playerID = 0
     cardID = 3
+    colour = 'R'
+    fireworks = game.fireworks[colour]
     card = game.hands[playerID][cardID]
-    pile = game.piles['R']
-    game.playCard(playerID, cardID, pile)
+    game.playCard(playerID, cardID, colour)
 
     snapshot.assert_match(game.deck)    # Verify that card was drawn
     assert len(game.hands[playerID]) == handSize
@@ -129,7 +130,7 @@ def test_play_fail(snapshot):
     assert game.strikes == 1            # Verify that a strike has been counted
     assert game.nHints == 0             # Verify that no hint was awarded
     assert game.score == 0              # Verify that no score was counted
-    assert pile.getTopCard() is None    # Verify that card was not played
+    assert fireworks.getTopCard() is None    # Verify that card was not played
     assert len(game.hands[0]) == 5
 
 def test_play_succeed(snapshot):
@@ -143,15 +144,16 @@ def test_play_succeed(snapshot):
     game.nHints = 0
     playerID = 0
     cardID = 3
+    colour = 'Y'
+    fireworks = game.fireworks[colour]
     card = game.hands[playerID][cardID]
-    pile = game.piles['Y']
-    game.playCard(playerID, cardID, pile)
+    game.playCard(playerID, cardID, colour)
 
     nextCard = card
     nextCard.value += 1
 
     assert game.score == 1              # Verify that score was counted
-    assert pile.getNextCard() == nextCard
+    assert fireworks.getNextCard() == nextCard
     assert len(game.hands[0]) == 5
     snapshot.assert_match(game.deck)
     snapshot.assert_match(game.hands[playerID])

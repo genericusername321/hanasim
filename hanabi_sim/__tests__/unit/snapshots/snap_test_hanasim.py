@@ -226,6 +226,13 @@ snapshots['test_play_succeed 1'] = [
     GenericRepr('<hanasim.Card object at 0x100000000>'),
     GenericRepr('<hanasim.Card object at 0x100000000>'),
     GenericRepr('<hanasim.Card object at 0x100000000>'),
+    GenericRepr('<hanasim.Card object at 0x100000000>')
+]
+
+snapshots['test_play_succeed 2'] = [
+    GenericRepr('<hanasim.Card object at 0x100000000>'),
+    GenericRepr('<hanasim.Card object at 0x100000000>'),
+    GenericRepr('<hanasim.Card object at 0x100000000>'),
     GenericRepr('<hanasim.Card object at 0x100000000>'),
     GenericRepr('<hanasim.Card object at 0x100000000>')
 ]

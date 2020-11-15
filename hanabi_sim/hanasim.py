@@ -56,7 +56,7 @@ class Card:
     def asString(self):
         return '{}{}'.format(self.colour, self.value)
 
-class Pile:
+class Firework:
 
     def __init__(self, colour):
         self.colour = colour
@@ -101,14 +101,14 @@ class Hint:
     Represents a hint given from one player to another.
     """
 
-    def __init__(self, playerID, value):
+    def __init__(self, receivingPlayerID, value):
         """
         :param player:  integer representing the receiving player
         :param value:   integer or char representing the hint value. Must be a 
                         in VALUE or COLOURS
         """
         assert(value in COLOURS or value in VALUES)
-        self.player = player
+        self.player = receivingPlayerID
         self.value = value
 
 class Move:
@@ -124,7 +124,6 @@ class Move:
         :param value: Value of the move. Can be a card or a hint.
         """
         allowedMoveTypes = ['play', 'hint', 'discard']
-
         assert(isinstance(turn, int))
         assert(isinstance(playerID, int))
         assert(moveType in allowedMoveTypes)
@@ -175,14 +174,14 @@ class GameState:
         # initialise piles as dictionary, taking colours as keys
         self.piles = {}
         for colour in COLOURS:
-            self.piles[colour] = Pile(colour)
+            self.piles[colour] = Firework(colour)
 
-    def playCard(self, playerID, idx, pile):
+    def playCard(self, playerID, idx, firework):
         """
         Player a card from playerIDs hand onko a pile
         :param playerID: integer in range [0, nPlayers-1]
         :param idx: index of the card to play, in the player's hand
-        :param pile: a Pile
+        :param firework: a Firework to play the card on
         :return:
         """
         # Check that the index refers to a valid card
@@ -190,7 +189,7 @@ class GameState:
 
         # Pop the card from the player hand
         card = self.hands[playerID][idx]
-        playedSuccess = pile.addCard(card)
+        playedSuccess = firework.addCard(card)
         if playedSuccess:
             self.hands[playerID].pop(idx)
             self.drawCard(playerID)

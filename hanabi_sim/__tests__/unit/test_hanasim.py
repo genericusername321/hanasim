@@ -1,5 +1,8 @@
-from hanasim import GameState, Move, PlayCard
+import hanasim as hs
+import cheatingAgent as agent
 import pytest
+import logging
+
 
 # Number of cards each player has in their hand
 HANDSIZE = {2: 5,
@@ -7,13 +10,27 @@ HANDSIZE = {2: 5,
             4: 4,
             5: 4}
 
+logLevel = logging.INFO
+
+formatter = logging.Formatter('%(name)s:%(levelname)s:%(message)s')
+fh = logging.FileHandler(filename='hanabi.log', mode='w')
+fh.setLevel(logLevel)
+fh.setFormatter(formatter)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logLevel)
+logger.addHandler(fh)
+
 class TestGameState:
 
     def setup_method(self):
+
+
+        # Configure logger
         self.nPlayers = 5
         self.handSize = 4
         self.seed = 0
-        self.game = GameState(self.nPlayers, self.handSize, self.seed)
+        self.game = hs.GameState(self.nPlayers, self.handSize, self.seed, deck=None, logger=logger)
         self.game.setup()
 
     def teardown_method(self):
@@ -24,7 +41,7 @@ class TestGameState:
         handSize = HANDSIZE[nPlayers]
         seed = 0
 
-        game = GameState(nPlayers, handSize, seed)
+        game = hs.GameState(nPlayers, handSize, seed)
 
         assert game.nPlayers == nPlayers
         assert game.handSize == handSize
@@ -36,7 +53,7 @@ class TestGameState:
     @pytest.mark.parametrize("handSize", [4,5])
     def test_setup(self, nPlayers, handSize, snapshot):
         seed = 0
-        game = GameState(nPlayers, handSize, seed)
+        game = hs.GameState(nPlayers, handSize, seed, logger=logger)
         game.setup()
 
         snapshot.assert_match(game.deck)
@@ -50,14 +67,14 @@ class TestGameState:
         seed = 0
 
         with pytest.raises(AssertionError):
-            game = GameState(nPlayers, handSize, seed)
+            game = hs.GameState(nPlayers, handSize, seed, logger=logger)
 
     @pytest.mark.parametrize("handSize", [3,6])
     def test_init_handSize(self, handSize):
         nPlayers = 2
         seed = 0
         with pytest.raises(AssertionError):
-            game = GameState(nPlayers, handSize, seed)
+            game = hs.GameState(nPlayers, handSize, seed, logger=logger)
 
     def test_discard_fullhints(self, snapshot):
 
@@ -166,7 +183,7 @@ class TestGameState:
         playerID = 0
         moveType = 'DISCARD'
         index = 0
-        move = Move(playerID, moveType, index)
+        move = hs.Move(playerID, moveType, index)
         game.doMove(move)
 
         assert game.nHints == 1
@@ -185,7 +202,7 @@ class TestGameState:
         fireworks = game.fireworks[colour]
         card = game.hands[playerID][cardIndex]
         
-        move = Move(playerID, moveType, PlayCard(cardIndex, colour))
+        move = hs.Move(playerID, moveType, hs.PlayCard(cardIndex, colour))
         game.doMove(move)
 
         nextCard = card
@@ -209,8 +226,63 @@ class TestGameState:
         colour = 'Y'
         card = game.hands[playerID][cardIndex]
         
-        move = Move(playerID, moveType, PlayCard(cardIndex, colour))
+        move = hs.Move(playerID, moveType, hs.PlayCard(cardIndex, colour))
         game.doMove(move)
+
+        nextCard = card
+        nextCard.value += 1
 
         fireworks = game.fireworks[colour]
         assert fireworks.getNextCard() == nextCard
+
+    def test_getHands(self, snapshot):
+
+        game = self.game
+
+        requestPlayerID = 0
+        targetPlayerID = 1
+
+        hand = game.getPlayerHand(requestPlayerID, targetPlayerID)
+        assert hand == game.hands[targetPlayerID]
+
+        with pytest.raises(ValueError):
+            hand = game.getPlayerHand(0, 0)
+
+    
+    def test_reset(self):
+
+        game = self.game
+
+        # Play a game
+        players = []
+        for playerID in range(game.nPlayers):
+            players.append(agent.Agent(playerID, game))
+
+        nTurn = 0
+        while game.isOver is False:
+            toPlay = nTurn % game.nPlayers
+            player = players[toPlay]
+            move = player.findMove()
+
+            game.doMove(move)
+
+        print("The final score is: {}".format(game.score))
+
+        game.reset()
+
+        # Verify that game is in original state
+        assert game.isOver == False
+        assert game.nHints == 8
+        assert game.strikes == 0
+        assert game.turn == 0
+        assert game.playerTurn == 0
+        assert game.turnAfterEmpty == game.nPlayers
+        assert not game.deck 
+        assert not game.moveHistory
+
+        for hand in game.hands:
+            assert not hand
+    
+        for card in game.discarded:
+            assert game.discarded[card] == 0
+

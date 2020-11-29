@@ -5,18 +5,6 @@ hanasim is a simulator for the card game Hanabi.
 import random
 import logging
 
-# Configure logger
-logLevel = logging.INFO
-
-formatter = logging.Formatter('%(name)s:%(levelname)s:%(message)s')
-fh = logging.FileHandler(filename='hanabi.log', mode='w')
-fh.setLevel(logLevel)
-fh.setFormatter(formatter)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logLevel)
-logger.addHandler(fh)
-
 # Constants
 MINPLAYERS = 2
 MAXPLAYERS = 5
@@ -33,7 +21,6 @@ CARDCOUNTS = {1: 3,
               3: 2,
               4: 2,
               5: 1}
-
 
 class Card:
     """
@@ -119,7 +106,7 @@ class PlayCard:
 
     def __init__(self, index, colour):
 
-        assert (isinstance(index, integer))
+        assert (isinstance(index, int))
         assert (colour in COLOURS)
 
         self.index = index
@@ -135,17 +122,17 @@ class Move:
         allowedMoveTypes = ['DISCARD', 'PLAY', 'HINT']
         assert (isinstance(playerID, int))
         assert (moveType in allowedMoveTypes)
-        assert (isinstance(value, int) or 
-                isinstance(value, Hint) or
-                isinstance(value, PlayCard))
+        assert (isinstance(moveDescription, int) or 
+                isinstance(moveDescription, Hint) or
+                isinstance(moveDescription, PlayCard))
 
         self.playerID = playerID
         self.moveType = moveType
-        self.moveDescription = value
+        self.moveDescription = moveDescription 
 
 class GameState:
 
-    def __init__(self, nPlayers, handSize, seed=0, deck=None):
+    def __init__(self, nPlayers, handSize, seed=0, deck=None, logger=None):
         """
         Constructor for the gamestate class
         :param nPlayers: integer in the range [MINPLAYERS, MAXPLAYERS], the number of
@@ -155,14 +142,15 @@ class GameState:
         :param deck: optional parameter, a deck of cards as a list of tuples
                     (colour, value)
         """
+
         assert (isinstance(nPlayers, int))
-        assert (nPlayers >= MINPLAYERS)
-        assert (nPlayers <= MAXPLAYERS)
         assert (isinstance(handSize, int))
-        assert (handSize >= MINHAND)
-        assert (handSize <= MAXHAND)
         assert (isinstance(seed, int))
 
+        assert (nPlayers >= MINPLAYERS and nPlayers <= MAXPLAYERS)
+        assert (handSize >= MINHAND and handSize <= MAXHAND)
+
+        self.isOver = False
 
         self.nHints = MAXHINTS
         self.strikes = 0
@@ -170,11 +158,19 @@ class GameState:
 
         self.turn = 0
         self.playerTurn = 0
+        self.turnAfterEmpty = nPlayers
 
         self.nPlayers = nPlayers
         self.handSize = handSize
         self.rSeed = seed
         self.deck = deck
+
+        if logger:
+            self.logger = logger
+        else: 
+            logger = logging.getLogger(__name__)
+            logger.setLevel(logging.CRITICAL)
+            self.logger = logger
 
         # List of moves
         self.moveHistory = []
@@ -189,6 +185,19 @@ class GameState:
         self.fireworks = {}
         for colour in COLOURS:
             self.fireworks[colour] = Firework(colour)
+
+    def getPlayerHand(self, requestPlayerID, targetPlayerID):
+        """
+        Get a player hand
+        :param playerIdTarget: player ID of target
+        :param playerIdRequester: player ID of requester
+        :return hand: List of cards, representing the playerIdTarget's hand.
+        """
+
+        if requestPlayerID == targetPlayerID:
+            raise ValueError("Player cannot request their own hand!")
+
+        return self.hands[targetPlayerID]
 
     def doMove(self, move):
         """
@@ -211,10 +220,15 @@ class GameState:
 
         self.moveHistory.append(move)
 
-    def getView(self, playerID):
-        """
-        Give a player their view of the board
-        """
+        if self.strikes > 2:
+            self.isOver = True
+            return
+
+        if not self.deck:
+            self.turnAfterEmpty -= 1
+        
+        if self.turnAfterEmpty == 0:
+            self.isOver = True
 
     def playCard(self, playerID, idx, colour):
         """
@@ -234,12 +248,12 @@ class GameState:
             self.hands[playerID].pop(idx)
             self.drawCard(playerID)
             self.score += 1
-            logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
+            self.logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
             if card.value == 5:
                 self.addHint()
         else:
             self.strikes += 1
-            logger.info('Player {} fails to play {}. {} strikes'.format(
+            self.logger.info('Player {} fails to play {}. {} strikes'.format(
                 playerID, card.asString(), self.strikes))
             self.forcedDiscard(playerID, idx)
 
@@ -256,8 +270,8 @@ class GameState:
             self.discarded[card] += 1
         else:
             self.discarded[card] = 1
-        logger.info('Player {} discarded {}'.format(playerID, card.asString()))
-        logger.info('Discard pile: {}'.format(self.discarded))
+        self.logger.info('Player {} discarded {}'.format(playerID, card.asString()))
+        self.logger.info('Discard pile: {}'.format(self.discarded))
         self.drawCard(playerID)
 
     def discard(self, playerID, index):
@@ -281,7 +295,7 @@ class GameState:
         if (self.deck):
             card = self.deck.pop()
             self.hands[playerID].append(card)
-            logger.info(f'player {playerID} draws {card.asString()}')
+            self.logger.info(f'player {playerID} draws {card.asString()}')
 
     def addHint(self):
         """
@@ -291,7 +305,33 @@ class GameState:
         if self.nHints < MAXHINTS:
             self.nHints += 1
 
-        logger.info('There are {} hints available'.format(self.nHints))
+        self.logger.info('There are {} hints available'.format(self.nHints))
+
+
+    def reset(self):
+        """
+        Reset the game state to the original state.
+        :return:
+        """
+
+        self.logger.info('Resetting game state')
+
+        self.nHints = 8
+        self.strikes = 0
+        self.turn = 0
+        self.turnAfterEmpty = self.nPlayers
+
+        self.deck = None
+        self.score = 0
+        self.moveHistory = []
+
+        self.hands = [[] for _ in range(self.nPlayers)]
+
+        self.discarded = {}
+        for colour in COLOURS:
+            self.fireworks[colour] = Firework(colour)
+
+        self.isOver = False
 
     def setup(self):
         """
@@ -301,9 +341,11 @@ class GameState:
             - Dealing hands
         :return:
         """
+        
+        self.logger.info('Setting up a new game')
 
         # Create a shuffled deck if no deck is provided
-        if not self.deck:
+        if self.deck is None:
             self.createDeck()
             self.shuffleDeck()
 
@@ -311,6 +353,7 @@ class GameState:
         self.setupDiscardedPile()
 
         # Deal from deck into hands
+        self.hands = [[] for _ in range(self.nPlayers)]
         self.dealHands()
 
     def createDeck(self):
@@ -320,14 +363,14 @@ class GameState:
         """
         self.deck = [Card(colour, value) for colour in COLOURS
                      for value in VALUES for _ in range(CARDCOUNTS[value])]
-        logger.info('Creating deck...')
+        self.logger.info('Creating deck...')
 
     def shuffleDeck(self):
         """
         Shuffles the deck
         :return:
         """
-        logger.info('Shuffling deck...')
+        self.logger.info('Shuffling deck...')
         random.seed(self.rSeed)
         random.shuffle(self.deck)
 

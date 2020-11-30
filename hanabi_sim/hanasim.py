@@ -162,8 +162,10 @@ class GameState:
 
         self.nPlayers = nPlayers
         self.handSize = handSize
-        self.rSeed = seed
         self.deck = deck
+
+        self.random = random;
+        self.random.seed(seed)
 
         if logger:
             self.logger = logger
@@ -371,8 +373,7 @@ class GameState:
         :return:
         """
         self.logger.info('Shuffling deck...')
-        random.seed(self.rSeed)
-        random.shuffle(self.deck)
+        self.random.shuffle(self.deck)
 
     def dealHands(self):
         """
@@ -394,5 +395,4 @@ class GameState:
 
         for card in cards:
             self.discarded[card] = 0
-
 

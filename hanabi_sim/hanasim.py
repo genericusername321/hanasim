@@ -210,6 +210,10 @@ class GameState:
         assert (isinstance(move, Move))
         moveType = move.moveType
         
+        # Correct player trying to make the move
+        if move.playerID != self.playerTurn:
+            raise ValueError('Attempted to move out of turn')
+
         # Resolve move depending on movetype
         if moveType == 'DISCARD':
             self.discard(move.playerID, move.moveDescription)
@@ -221,6 +225,9 @@ class GameState:
             raise ValueError('Illegal move type')
 
         self.moveHistory.append(move)
+        self.turn = self.turn + 1
+        self.playerTurn = self.turn % self.nPlayers
+
 
         if self.strikes > 2:
             self.isOver = True
@@ -321,6 +328,7 @@ class GameState:
         self.nHints = 8
         self.strikes = 0
         self.turn = 0
+        self.playerTurn = 0
         self.turnAfterEmpty = self.nPlayers
 
         self.deck = None

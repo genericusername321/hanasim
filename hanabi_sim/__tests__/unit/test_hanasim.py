@@ -254,16 +254,13 @@ class TestGameState:
         game = self.game
 
         # Play a game
-        players = []
-        for playerID in range(game.nPlayers):
-            players.append(agent.Agent(playerID, game))
+        players = [agent.Agent(playerID, game) for playerID in range(game.nPlayers)]
 
-        nTurn = 0
-        while game.isOver is False:
-            toPlay = nTurn % game.nPlayers
-            player = players[toPlay]
-            move = player.findMove()
-
+        ply = 0
+        while not game.isOver:
+            turn = ply % game.nPlayers
+            ply = ply + 1
+            move = players[turn].findMove()
             game.doMove(move)
 
         print("The final score is: {}".format(game.score))

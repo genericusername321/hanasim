@@ -12,7 +12,7 @@ HANDSIZE = {2: 5,
             4: 4,
             5: 4}
 
-logLevel = logging.CRITICAL
+logLevel = logging.INFO
 
 formatter = logging.Formatter('%(name)s:%(levelname)s:%(message)s')
 fh = logging.FileHandler(filename='hanabi.log', mode='w')
@@ -31,21 +31,16 @@ game = hs.GameState(nPlayers, handSize, seed, logger = logger);
 game.setup()
 
 # Set up players
-player1 = agent.Agent(0, game)
-player2 = agent.Agent(1, game)
+players = [agent.Agent(ii, game) for ii in range(nPlayers)]
 
-N = 2000
+N = 2
 scores = np.zeros(N)
 for i in range(N):
-    nTurn = 0
+    ply = 0
     while (not game.isOver):
-        playerToPlay = nTurn % nPlayers
-
-        if playerToPlay == 0:
-            move = player1.findMove()
-        else:
-            move = player2.findMove()
-
+        turn = ply % nPlayers
+        ply=ply+1
+        move = players[turn].findMove()
         game.doMove(move)
 
     scores[i] = game.score;

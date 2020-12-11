@@ -211,8 +211,7 @@ class GameState:
         moveType = move.moveType
         
         # Correct player trying to make the move
-        if move.playerID != self.playerTurn:
-            raise ValueError('Attempted to move out of turn')
+        assert move.playerID == self.playerTurn
 
         # Resolve move depending on movetype
         if moveType == 'DISCARD':
@@ -225,7 +224,7 @@ class GameState:
             raise ValueError('Illegal move type')
 
         self.moveHistory.append(move)
-        self.turn = self.turn + 1
+        self.turn += 1
         self.playerTurn = self.turn % self.nPlayers
 
 

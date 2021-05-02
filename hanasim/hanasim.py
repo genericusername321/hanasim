@@ -6,14 +6,8 @@ import random
 import logging
 
 # Constants
-MINPLAYERS = 2
-MAXPLAYERS = 5
-MINHAND = 4 
-MAXHAND = 5
 COLOURS = ['R', 'G', 'B', 'Y', 'P']
 VALUES = [1, 2, 3, 4, 5]
-MAXHINTS = 8
-MAXSTRIKES = 3
 
 # Number of duplicates of a card with a particular value in a fresh deck
 CARDCOUNTS = {1: 3,
@@ -139,11 +133,17 @@ class Move:
 
 class GameState:
 
-    _HandSize = 
+    # Class constants
+    MINPLAYERS = 2
+    MAXPLAYERS = 5
+    MINHAND = 4
+    MAXHAND = 5
+    MAXHINTS = 8
+    MAXSTRIKES = 3
 
     def __init__(self, nPlayers, handSize, seed=0, deck=None, logger=None):
         """
-        Constructor for the gamestate class
+        Constructor for the GameState class
         :param nPlayers: integer in the range [MINPLAYERS, MAXPLAYERS], the number of
                         players in the game
         :param handSize: number of cards in each player's hand
@@ -156,12 +156,12 @@ class GameState:
         assert (isinstance(handSize, int))
         assert (isinstance(seed, int))
 
-        assert (nPlayers >= MINPLAYERS and nPlayers <= MAXPLAYERS)
-        assert (handSize >= MINHAND and handSize <= MAXHAND)
+        assert (nPlayers >= self.MINPLAYERS and nPlayers <= self.MAXPLAYERS)
+        assert (handSize >= self.MINHAND and handSize <= self.MAXHAND)
 
         self.isOver = False
 
-        self.nHints = MAXHINTS
+        self.nHints = self.MAXHINTS
         self.strikes = 0
         self.score = 0
 
@@ -237,7 +237,7 @@ class GameState:
         self.playerTurn = self.turn % self.nPlayers
 
 
-        if self.strikes > 2:
+        if self.strikes == self.MAXSTRIKES:
             self.isOver = True
             return
 
@@ -319,7 +319,7 @@ class GameState:
         Increment the number of hints
         :return:
         """
-        if self.nHints < MAXHINTS:
+        if self.nHints < self.MAXHINTS:
             self.nHints += 1
 
         self.logger.info('There are {} hints available'.format(self.nHints))
@@ -406,8 +406,7 @@ class GameState:
         :return:
         """
 
-        cards = [Card(colour, value) for colour in COLOURS
-                for value in VALUES]
+        cards = [Card(colour, value) for colour in COLOURS for value in VALUES]
 
         for card in cards:
             self.discarded[card] = 0

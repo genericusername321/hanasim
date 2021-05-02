@@ -1,8 +1,8 @@
 import pytest
 import logging
 import time
-import hanasim as hs
-import cheatingAgent as agent
+import hanasim.hanasim as hs
+import agents.cheater as agent
 
 import pandas as pd
 import numpy as np

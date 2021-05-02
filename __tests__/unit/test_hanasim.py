@@ -1,5 +1,5 @@
-import hanasim as hs
-import cheatingAgent as agent
+import hanasim.hanasim as hs
+import agents.cheater as agent
 import pytest
 import logging
 
@@ -24,7 +24,6 @@ logger.addHandler(fh)
 class TestGameState:
 
     def setup_method(self):
-
 
         # Configure logger
         self.nPlayers = 5

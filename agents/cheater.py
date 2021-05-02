@@ -1,6 +1,6 @@
 # A cheating hanabi agent
 
-import hanasim as hs
+import hanasim.hanasim as hs
 
 class Agent:
 

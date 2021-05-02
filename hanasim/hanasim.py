@@ -22,6 +22,13 @@ CARDCOUNTS = {1: 3,
               4: 2,
               5: 1}
 
+# Size of hand for different numbers of players
+HANDSIZE = {
+        2: 5,
+        3: 5,
+        4: 4,
+        5: 4}
+
 class Card:
     """
     A class that models a Hanabi card. It contains the colour and value of
@@ -131,6 +138,8 @@ class Move:
         self.moveDescription = moveDescription 
 
 class GameState:
+
+    _HandSize = 
 
     def __init__(self, nPlayers, handSize, seed=0, deck=None, logger=None):
         """

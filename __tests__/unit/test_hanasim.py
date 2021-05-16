@@ -1,5 +1,5 @@
 import hanasim.hanasim as hs
-import agents.cheater as agent
+import agents.cheater_discard_first as agent
 import pytest
 import logging
 
@@ -33,9 +33,9 @@ class TestGameState:
         self.game.setup()
 
     def teardown_method(self):
-        del(self.game)
+        del self.game
 
-    @pytest.mark.parametrize("nPlayers", [2,3,4,5])
+    @pytest.mark.parametrize("nPlayers", [2, 3, 4, 5])
     def test_init(self, nPlayers):
         handSize = HANDSIZE[nPlayers]
         seed = 0
@@ -48,8 +48,8 @@ class TestGameState:
         assert game.strikes == 0
         assert game.score == 0
 
-    @pytest.mark.parametrize("nPlayers", [2,3,4,5])
-    @pytest.mark.parametrize("handSize", [4,5])
+    @pytest.mark.parametrize("nPlayers", [2, 3, 4, 5])
+    @pytest.mark.parametrize("handSize", [4, 5])
     def test_setup(self, nPlayers, handSize, snapshot):
         seed = 0
         game = hs.GameState(nPlayers, handSize, seed, logger=logger)
@@ -60,7 +60,7 @@ class TestGameState:
         for i in range(nPlayers):
             assert (len(game.hands[i]) == handSize)
 
-    @pytest.mark.parametrize("nPlayers", [1,6])
+    @pytest.mark.parametrize("nPlayers", [1, 6])
     def test_init_nPlayers(self, nPlayers):
         handSize = 4
         seed = 0

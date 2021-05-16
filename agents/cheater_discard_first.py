@@ -3,6 +3,19 @@
 import hanasim.hanasim as hs
 
 class Agent:
+    """
+    This agent cheats by inspecting its own
+    hand to find a card that can be played, eliminating the need 
+    to be hinted, as such it also does not hint other players. It 
+    performs actions with the following priority:
+        1. Finds card to play in own hand
+        2. If no card is playable, discard
+
+    If no card can be played, it will discard the first card in its
+    hand.
+    """
+
+
 
     def __init__(self, playerID, game):
 
@@ -11,7 +24,8 @@ class Agent:
 
     def findMove(self):
         """
-        Finds a move to play
+        Computes move according to priorities set in class description
+
         :return: hanasim.Move type object encoding the selected move
         """
 

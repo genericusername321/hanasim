@@ -2,7 +2,7 @@ import pytest
 import logging
 import time
 import hanasim.hanasim as hs
-import agents.cheater as agent
+import agents.cheater_discard_random as agent
 
 import pandas as pd
 import numpy as np

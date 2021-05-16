@@ -109,7 +109,6 @@ class PlayCard:
         self.index = index
         self.colour = colour
 
-
 class Move:
     """
     Represents a move performed by a player in a single turn.
@@ -438,3 +437,12 @@ class GameState:
         for i in range(self.handSize):
             for player in range(self.nPlayers):
                 self.drawCard(player)
+
+    def computePace(self):
+        """
+        Compute the pace, which is the maximum number of discards allowed to
+        achieve maximum score
+        """
+
+        maxScore = self.discardPile.getMaxScore()
+        return self.score + len(self.deck) + self.nPlayers - maxScore

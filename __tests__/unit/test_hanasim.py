@@ -280,3 +280,17 @@ class TestGameState:
 
         for card in game.discardPile.cardCounts:
             assert game.discardPile.cardCounts[card] == 0
+
+    def test_computePace(self):
+
+        game = self.game
+        pace = game.computePace()
+
+        assert pace == 10
+
+        # Discard something
+        game.doMove(hs.Move(0, 'DISCARD', 0))
+        pace = game.computePace()
+        assert pace == 9
+
+

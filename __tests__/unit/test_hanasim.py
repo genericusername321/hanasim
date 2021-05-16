@@ -68,7 +68,7 @@ class TestGameState:
         with pytest.raises(AssertionError):
             game = hs.GameState(nPlayers, handSize, seed, logger=logger)
 
-    @pytest.mark.parametrize("handSize", [3,6])
+    @pytest.mark.parametrize("handSize", [3, 6])
     def test_init_handSize(self, handSize):
         nPlayers = 2
         seed = 0
@@ -86,7 +86,7 @@ class TestGameState:
 
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
-        assert game.discarded[card] == 1
+        assert game.discardPile.cardCounts[card] == 1
         assert game.nHints == 8
 
     def test_discard_addhint(self, snapshot):
@@ -103,7 +103,7 @@ class TestGameState:
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
         assert game.nHints == 1
-        assert game.discarded[card] == 1
+        assert game.discardPile.cardCounts[card] == 1
 
     def test_force_discard(self, snapshot):
 
@@ -117,7 +117,7 @@ class TestGameState:
         game.forcedDiscard(playerID, cardIndex)
         
         assert game.nHints == 0
-        assert game.discarded[card] == 1
+        assert game.discardPile.cardCounts[card] == 1
 
     def test_play_fail(self, snapshot):
 
@@ -135,7 +135,7 @@ class TestGameState:
 
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
-        assert game.discarded[card] == 1
+        assert game.discardPile.cardCounts[card] == 1
         assert game.strikes == 1
         assert game.nHints == 0
         assert game.score == 0
@@ -279,6 +279,6 @@ class TestGameState:
         for hand in game.hands:
             assert not hand
     
-        for card in game.discarded:
-            assert game.discarded[card] == 0
+        for card in game.discardPile.cardCounts:
+            assert game.discardPile.cardCounts[card] == 0
 

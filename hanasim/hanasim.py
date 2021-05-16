@@ -16,13 +16,6 @@ CARDCOUNTS = {1: 3,
               4: 2,
               5: 1}
 
-# Size of hand for different numbers of players
-HANDSIZE = {
-    2: 5,
-    3: 5,
-    4: 4,
-    5: 4}
-
 
 class Card:
     """
@@ -135,6 +128,52 @@ class Move:
         self.moveDescription = moveDescription
 
 
+class DiscardPile:
+
+    def __init__(self, maxCardCounts):
+        """
+        Constructor for the DiscardPile class
+        :param maxCardCounts: dictionary mapping the value of a card to the number
+                            of occurrences of that card in the deck
+        """
+        self.maxCardCounts = maxCardCounts
+        self.cardCounts = {}
+        self.setup()
+
+    def setup(self):
+        """
+        Initiate the discard pile to empty
+        """
+
+        cards = [Card(colour, value) for colour in COLOURS for value in VALUES]
+        self.cardCounts = {card: 0 for card in cards}
+
+    def getMaxScore(self):
+        """
+        Compute the maximum possible score, without considering the number of turns
+        left.
+        """
+
+        maxScore = 0
+        for colour in COLOURS:
+            for value in VALUES:
+                card = Card(colour, value)
+                if self.cardCounts.get(card) < self.maxCardCounts.get(value):
+                    maxScore += 1
+                else:
+                    break
+
+        return maxScore
+
+    def discard(self, card):
+        """
+        Add card to discard pile
+        """
+
+        assert (card in self.cardCounts)
+        self.cardCounts[card] += 1
+
+
 class GameState:
     # Class constants
     MINPLAYERS = 2
@@ -143,6 +182,11 @@ class GameState:
     MAXHAND = 5
     MAXHINTS = 8
     MAXSTRIKES = 3
+    HANDSIZE = {
+        2: 5,
+        3: 5,
+        4: 4,
+        5: 4}
 
     def __init__(self, nPlayers, handSize, seed=0, deck=None, logger=None):
         """
@@ -193,7 +237,7 @@ class GameState:
         self.hands = [[] for _ in range(self.nPlayers)]
 
         # Discard pile
-        self.discarded = {}
+        self.discardPile = DiscardPile(CARDCOUNTS)
 
         # Fireworks
         self.fireworks = {}
@@ -280,23 +324,20 @@ class GameState:
         """
         Discard a card from a player's hand without awarding a hint.
         :param playerID: integer
-        :param index: the index of the card to be discarded
+        :param index: the index of the card to be discardPile
         """
 
         card = self.hands[playerID].pop(index)
-        if card in self.discarded:
-            self.discarded[card] += 1
-        else:
-            self.discarded[card] = 1
-        self.logger.info('Player {} discarded {}'.format(playerID, card.asString()))
-        self.logger.info('Discard pile: {}'.format(self.discarded))
+        self.discardPile.discard(card)
+        self.logger.info('Player {} discardPile {}'.format(playerID, card.asString()))
+        self.logger.info('Discard pile: {}'.format(self.discardPile.cardCounts))
         self.drawCard(playerID)
 
     def discard(self, playerID, index):
         """
         Discard a card from a player's hand, then draw a new card from the deck.
         :param playerID: integer
-        :param index: the index of the card to be discarded
+        :param index: the index of the card to be discardPile
         :return:
         """
         self.addHint()
@@ -345,7 +386,8 @@ class GameState:
 
         self.hands = [[] for _ in range(self.nPlayers)]
 
-        self.discarded = {}
+        self.discardPile.setup()
+
         for colour in COLOURS:
             self.fireworks[colour] = Firework(colour)
 
@@ -355,7 +397,7 @@ class GameState:
         """
         Setup the game by:
             - Creating a sorted deck
-            - Setup discarded pile
+            - Setup discardPile pile
             - Dealing hands
         :return:
         """
@@ -366,9 +408,6 @@ class GameState:
         if self.deck is None:
             self.createDeck()
             self.shuffleDeck()
-
-        # Setup pile of discarded cards
-        self.setupDiscardedPile()
 
         # Deal from deck into hands
         self.hands = [[] for _ in range(self.nPlayers)]
@@ -399,14 +438,3 @@ class GameState:
         for i in range(self.handSize):
             for player in range(self.nPlayers):
                 self.drawCard(player)
-
-    def setupDiscardedPile(self):
-        """
-        Setup the discarded pile
-        :return:
-        """
-
-        cards = [Card(colour, value) for colour in COLOURS for value in VALUES]
-
-        for card in cards:
-            self.discarded[card] = 0

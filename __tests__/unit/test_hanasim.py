@@ -3,7 +3,6 @@ import agents.cheater_discard_first as agent
 import pytest
 import logging
 
-
 # Number of cards each player has in their hand
 HANDSIZE = {2: 5,
             3: 5,
@@ -20,6 +19,7 @@ fh.setFormatter(formatter)
 logger = logging.getLogger(__name__)
 logger.setLevel(logLevel)
 logger.addHandler(fh)
+
 
 class TestGameState:
 
@@ -66,14 +66,14 @@ class TestGameState:
         seed = 0
 
         with pytest.raises(AssertionError):
-            game = hs.GameState(nPlayers, handSize, seed, logger=logger)
+            hs.GameState(nPlayers, handSize, seed, logger=logger)
 
     @pytest.mark.parametrize("handSize", [3, 6])
     def test_init_handSize(self, handSize):
         nPlayers = 2
         seed = 0
         with pytest.raises(AssertionError):
-            game = hs.GameState(nPlayers, handSize, seed, logger=logger)
+            hs.GameState(nPlayers, handSize, seed, logger=logger)
 
     def test_discard_fullhints(self, snapshot):
 
@@ -105,7 +105,7 @@ class TestGameState:
         assert game.nHints == 1
         assert game.discardPile.cardCounts[card] == 1
 
-    def test_force_discard(self, snapshot):
+    def test_force_discard(self):
 
         # Set number of hints to 0
         game = self.game
@@ -115,7 +115,7 @@ class TestGameState:
         cardIndex = 0
         card = game.hands[playerID][cardIndex]
         game.forcedDiscard(playerID, cardIndex)
-        
+
         assert game.nHints == 0
         assert game.discardPile.cardCounts[card] == 1
 
@@ -130,7 +130,7 @@ class TestGameState:
         colour = 'R'
         card = game.hands[playerID][cardID]
         fireworks = game.fireworks[colour]
-        
+
         game.playCard(playerID, cardID, colour)
 
         snapshot.assert_match(game.deck)
@@ -151,15 +151,15 @@ class TestGameState:
         colour = 'Y'
         fireworks = game.fireworks[colour]
         card = game.hands[playerID][cardID]
-        
-        game.playCard(playerID, cardID, colour) 
+
+        game.playCard(playerID, cardID, colour)
 
         nextCard = card
         nextCard.value += 1
 
         assert game.strikes == 0
         assert game.nHints == 0
-        assert game.score == 1              
+        assert game.score == 1
         assert fireworks.getNextCard() == nextCard
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
@@ -169,7 +169,7 @@ class TestGameState:
         game = self.game
         game.addHint()
         assert game.nHints == 8
-    
+
         game.nHints = 0
         game.addHint()
         assert game.nHints == 1
@@ -190,7 +190,7 @@ class TestGameState:
         snapshot.assert_match(game.hands[playerID])
 
     def test_doMove_play_success(self, snapshot):
-        
+
         game = self.game
         game.nHints = 0
 
@@ -200,7 +200,7 @@ class TestGameState:
         colour = 'Y'
         fireworks = game.fireworks[colour]
         card = game.hands[playerID][cardIndex]
-        
+
         move = hs.Move(playerID, moveType, hs.PlayCard(cardIndex, colour))
         game.doMove(move)
 
@@ -209,12 +209,12 @@ class TestGameState:
 
         assert game.strikes == 0
         assert game.nHints == 0
-        assert game.score == 1              
+        assert game.score == 1
         assert fireworks.getNextCard() == nextCard
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
 
-    def test_doMove_play_fail(self, snapshot):
+    def test_doMove_play_fail(self):
 
         game = self.game
         game.nHints = 0
@@ -224,7 +224,7 @@ class TestGameState:
         cardIndex = 1
         colour = 'Y'
         card = game.hands[playerID][cardIndex]
-        
+
         move = hs.Move(playerID, moveType, hs.PlayCard(cardIndex, colour))
         game.doMove(move)
 
@@ -234,7 +234,7 @@ class TestGameState:
         fireworks = game.fireworks[colour]
         assert fireworks.getNextCard() == nextCard
 
-    def test_getHands(self, snapshot):
+    def test_getHands(self):
 
         game = self.game
 
@@ -245,9 +245,8 @@ class TestGameState:
         assert hand == game.hands[targetPlayerID]
 
         with pytest.raises(ValueError):
-            hand = game.getPlayerHand(0, 0)
+            game.getPlayerHand(0, 0)
 
-    
     def test_reset(self):
 
         game = self.game
@@ -267,18 +266,17 @@ class TestGameState:
         game.reset()
 
         # Verify that game is in original state
-        assert game.isOver == False
+        assert game.isOver is False
         assert game.nHints == 8
         assert game.strikes == 0
         assert game.turn == 0
         assert game.playerTurn == 0
         assert game.turnAfterEmpty == game.nPlayers
-        assert not game.deck 
+        assert not game.deck
         assert not game.moveHistory
 
         for hand in game.hands:
             assert not hand
-    
+
         for card in game.discardPile.cardCounts:
             assert game.discardPile.cardCounts[card] == 0
-

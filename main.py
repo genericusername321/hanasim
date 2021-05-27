@@ -1,4 +1,3 @@
-import pytest
 import logging
 import time
 import hanasim.hanasim as hs
@@ -13,21 +12,11 @@ HANDSIZE = {2: 5,
             4: 4,
             5: 4}
 
-logLevel = logging.CRITICAL 
-formatter = logging.Formatter('%(name)s:%(levelname)s:%(message)s')
-fh = logging.FileHandler(filename='hanabi.log', mode='w')
-fh.setLevel(logLevel)
-fh.setFormatter(formatter)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logLevel)
-logger.addHandler(fh)
-
 # Set up game
 nPlayers = 2
 handSize = HANDSIZE[nPlayers]
 seed = 0
-game = hs.GameState(nPlayers, handSize, seed, logger = logger);
+game = hs.GameState(nPlayers, handSize, seed)
 game.setup()
 
 # Set up players
@@ -44,15 +33,16 @@ for i in range(N):
         ply=ply+1
         move = players[turn].findMove()
         game.doMove(move)
+
     toc = time.perf_counter()
-    scores[i] = game.score;
+    scores[i] = game.score
     times[i] = toc-tic
     game.reset()
     game.setup()
 
-df = pd.DataFrame({'Scores' : scores})
+df = pd.DataFrame({'Scores': scores})
 print(df.describe())
 
-dfTime = pd.DataFrame({'Time' : times})
+dfTime = pd.DataFrame({'Time': times})
 print(dfTime.describe())
 

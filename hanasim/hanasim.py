@@ -33,6 +33,21 @@ class Card:
         else:
             return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if self.value < other.value:
+            return True
+        else:
+            return False
+
+    def __gt__(self, other):
+        if self.value > other.value:
+            return True
+        else:
+            return False
+
     def __hash__(self):
         return hash((self.colour, self.value))
 
@@ -109,6 +124,7 @@ class PlayCard:
         self.index = index
         self.colour = colour
 
+
 class Move:
     """
     Represents a move performed by a player in a single turn.
@@ -137,6 +153,7 @@ class DiscardPile:
         """
         self.maxCardCounts = maxCardCounts
         self.cardCounts = {}
+        self.deadCards = set()
         self.setup()
 
     def setup(self):
@@ -146,6 +163,7 @@ class DiscardPile:
 
         cards = [Card(colour, value) for colour in COLOURS for value in VALUES]
         self.cardCounts = {card: 0 for card in cards}
+        self.deadCards = set()
 
     def getMaxScore(self):
         """
@@ -166,11 +184,33 @@ class DiscardPile:
 
     def discard(self, card):
         """
-        Add card to discard pile
+        Add card to discard pile, and if all copies have been discarded, add to set of dead
+        cards
         """
 
         assert (card in self.cardCounts)
         self.cardCounts[card] += 1
+
+        if self.cardCounts[card] == self.maxCardCounts.get(card.value):
+            self.deadCards.add(card)
+
+    def remove(self, card):
+        """
+        Remove a card from discard pile
+        """
+
+        assert (card in self.cardCounts)
+        assert (self.cardCounts[card] > 0)
+
+        self.cardCounts[card] -= 1
+
+    def getCriticalCards(self):
+        """
+        Retrieve a list of cards of which only 1 copy is left in the game
+        """
+
+        criticalCards = [card for card in self.cardCounts if self.cardCounts[card] == self.maxCardCounts[card.value] - 1]
+        return criticalCards
 
 
 class GameState:

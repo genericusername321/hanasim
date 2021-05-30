@@ -154,8 +154,7 @@ class TestGameState:
 
         game.playCard(playerID, cardID, colour)
 
-        nextCard = card
-        nextCard.value += 1
+        nextCard = hs.Card(card.colour, card.value+1)
 
         assert game.strikes == 0
         assert game.nHints == 0
@@ -163,6 +162,10 @@ class TestGameState:
         assert fireworks.getNextCard() == nextCard
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
+
+        print(game.playedCards)
+
+        assert game.playedCards == {hs.Card('Y', 1)}
 
     def test_addhint(self):
 
@@ -213,6 +216,7 @@ class TestGameState:
         assert fireworks.getNextCard() == nextCard
         snapshot.assert_match(game.deck)
         snapshot.assert_match(game.hands[playerID])
+        snapshot.assert_match(game.playedCards)
 
     def test_doMove_play_fail(self):
 

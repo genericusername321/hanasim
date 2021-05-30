@@ -47,5 +47,15 @@ class TestDiscardPile:
 
         assert actual == expected
 
+    def test_deadCards(self):
+
+        card = hs.Card('R', 2)
+        for _ in range(2):
+            self.discardPile.discard(card)
+
+        expected = set([hs.Card('R', value) for value in hs.VALUES if value >= 2])
+        actual = self.discardPile.deadCards
+        assert expected == actual
+
 
 

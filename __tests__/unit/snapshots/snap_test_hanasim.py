@@ -538,3 +538,7 @@ snapshots['TestGameState.test_doMove_play_success 2'] = [
     GenericRepr('G4'),
     GenericRepr('G4')
 ]
+
+snapshots['TestGameState.test_doMove_play_success 3'] = set([
+    GenericRepr('Y2')
+])

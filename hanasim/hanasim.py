@@ -98,6 +98,16 @@ class Firework:
         else:
             return False
 
+    def __repr__(self):
+        """
+        Represent firework by its top card
+        """
+
+        if self.pile:
+            return self.pile[-1].__repr__()
+        else:
+            return self.colour
+
 
 class Hint:
     """
@@ -155,6 +165,7 @@ class DiscardPile:
         self.cardCounts = {}
         self.deadCards = set()
         self.setup()
+        self.total = 0
 
     def setup(self):
         """
@@ -164,6 +175,7 @@ class DiscardPile:
         cards = [Card(colour, value) for colour in COLOURS for value in VALUES]
         self.cardCounts = {card: 0 for card in cards}
         self.deadCards = set()
+        self.total = 0
 
     def getMaxScore(self):
         """
@@ -190,9 +202,13 @@ class DiscardPile:
 
         assert (card in self.cardCounts)
         self.cardCounts[card] += 1
+        self.total += 1
 
         if self.cardCounts[card] == self.maxCardCounts.get(card.value):
-            self.deadCards.add(card)
+            # Add all cards of same colour with greater value
+            deadCards = [Card(card.colour, value) for value in VALUES if value >= card.value]
+            for c in deadCards:
+                self.deadCards.add(c)
 
     def remove(self, card):
         """
@@ -211,7 +227,6 @@ class DiscardPile:
 
         criticalCards = [card for card in self.cardCounts if self.cardCounts[card] == self.maxCardCounts[card.value] - 1]
         return criticalCards
-
 
 class GameState:
     # Class constants
@@ -278,6 +293,8 @@ class GameState:
         # Discard pile
         self.discardPile = DiscardPile(CARDCOUNTS)
 
+        self.playedCards = set()
+
         # Fireworks
         self.fireworks = {}
         for colour in COLOURS:
@@ -305,6 +322,10 @@ class GameState:
         assert (isinstance(move, Move))
         moveType = move.moveType
 
+        self.logger.info(f'Turn {self.turn}: Player {self.turn % self.nPlayers}')
+        self.logger.debug(f'Hand: {self.hands[self.turn % self.nPlayers]}')
+        self.logger.debug(f'Fireworks: {self.fireworks}')
+
         # Correct player trying to make the move
         assert move.playerID == self.playerTurn
 
@@ -314,7 +335,7 @@ class GameState:
         elif moveType == 'PLAY':
             self.playCard(move.playerID, move.moveDescription.index, move.moveDescription.colour)
         elif moveType == 'HINT':
-            pass
+            self.nHints -= 1
         else:
             raise ValueError('Illegal move type')
 
@@ -328,9 +349,11 @@ class GameState:
 
         if not self.deck:
             self.turnAfterEmpty -= 1
+            self.logger.info(f'Deck is empty, {self.turnAfterEmpty} turns left!')
 
         if self.turnAfterEmpty == 0:
             self.isOver = True
+            self.logger.info(f'Game is over! Score: {self.score}')
 
     def playCard(self, playerID, idx, colour):
         """
@@ -347,12 +370,14 @@ class GameState:
         card = self.hands[playerID][idx]
         playedSuccess = self.fireworks[colour].addCard(card)
         if playedSuccess:
+            self.playedCards.add(card)
             self.hands[playerID].pop(idx)
-            self.drawCard(playerID)
             self.score += 1
             self.logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
             if card.value == 5:
                 self.addHint()
+
+            self.drawCard(playerID)
         else:
             self.strikes += 1
             self.logger.info('Player {} fails to play {}. {} strikes'.format(
@@ -368,8 +393,8 @@ class GameState:
 
         card = self.hands[playerID].pop(index)
         self.discardPile.discard(card)
-        self.logger.info('Player {} discardPile {}'.format(playerID, card.asString()))
-        self.logger.info('Discard pile: {}'.format(self.discardPile.cardCounts))
+        self.logger.info('Player {} discards {}'.format(playerID, card.asString()))
+        self.logger.debug(f'{self.discardPile.cardCounts}')
         self.drawCard(playerID)
 
     def discard(self, playerID, index):
@@ -379,8 +404,8 @@ class GameState:
         :param index: the index of the card to be discardPile
         :return:
         """
-        self.addHint()
         self.forcedDiscard(playerID, index)
+        self.addHint()
 
     def drawCard(self, playerID):
         """
@@ -403,7 +428,7 @@ class GameState:
         if self.nHints < self.MAXHINTS:
             self.nHints += 1
 
-        self.logger.info('There are {} hints available'.format(self.nHints))
+        self.logger.info('A hint has been added. There are {} hints available'.format(self.nHints))
 
     def reset(self):
         """
@@ -451,6 +476,7 @@ class GameState:
         # Deal from deck into hands
         self.hands = [[] for _ in range(self.nPlayers)]
         self.dealHands()
+        self.logger.info(f'Game setup complete. Game starting now...')
 
     def createDeck(self):
         """
@@ -466,7 +492,7 @@ class GameState:
         Shuffles the deck
         :return:
         """
-        self.logger.info('Shuffling deck...')
+        self.logger.debug('Shuffling deck...')
         self.random.shuffle(self.deck)
 
     def dealHands(self):

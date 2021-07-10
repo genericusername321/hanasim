@@ -51,7 +51,7 @@ class Card:
     def __hash__(self):
         return hash((self.colour, self.value))
 
-    def asString(self):
+    def __str__(self):
         return '{}{}'.format(self.colour, self.value)
 
     def __repr__(self):
@@ -380,7 +380,7 @@ class GameState:
             self.playedCards.add(card)
             self.hands[playerID].pop(idx)
             self.score += 1
-            self.logger.info('Player {} successfully plays {}'.format(playerID, card.asString()))
+            self.logger.info('Player {} successfully plays {}'.format(playerID, str(card)))
             if card.value == 5:
                 self.addHint()
 

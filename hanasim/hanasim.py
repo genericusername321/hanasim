@@ -69,8 +69,7 @@ class Firework:
         Gets the colour and value of the next card to go on the pile
         :return: tuple: (colour, value)
         """
-        nextCard = Card(self.colour, len(self.pile) + 1)
-        return nextCard
+        return Card(self.colour, len(self.pile) + 1)
 
     def getTopCard(self):
         """
@@ -141,6 +140,10 @@ class Move:
     """
 
     def __init__(self, playerID, moveType, moveDescription):
+        """
+
+        @rtype: object
+        """
         allowedMoveTypes = ['DISCARD', 'PLAY', 'HINT']
         assert (isinstance(playerID, int))
         assert (moveType in allowedMoveTypes)
@@ -225,8 +228,10 @@ class DiscardPile:
         Retrieve a list of cards of which only 1 copy is left in the game
         """
 
-        criticalCards = [card for card in self.cardCounts if self.cardCounts[card] == self.maxCardCounts[card.value] - 1]
+        criticalCards = [card for card in self.cardCounts if \
+                         self.cardCounts[card] == self.maxCardCounts[card.value] - 1]
         return criticalCards
+
 
 class GameState:
     # Class constants
@@ -241,6 +246,7 @@ class GameState:
         3: 5,
         4: 4,
         5: 4}
+    TOTALCARDS = 50
 
     def __init__(self, nPlayers, handSize, seed=0, deck=None, logger=None):
         """
@@ -335,6 +341,7 @@ class GameState:
         elif moveType == 'PLAY':
             self.playCard(move.playerID, move.moveDescription.index, move.moveDescription.colour)
         elif moveType == 'HINT':
+            assert self.nHints > 0
             self.nHints -= 1
         else:
             raise ValueError('Illegal move type')
@@ -504,6 +511,14 @@ class GameState:
             for player in range(self.nPlayers):
                 self.drawCard(player)
 
+    def getMaxScore(self):
+        """
+        Compute maximum achievable score
+        @return:
+        """
+
+        return self.discardPile.getMaxScore()
+
     def computePace(self):
         """
         Compute the pace, which is the maximum number of discards allowed to
@@ -512,3 +527,37 @@ class GameState:
 
         maxScore = self.discardPile.getMaxScore()
         return self.score + len(self.deck) + self.nPlayers - maxScore
+
+    def getPlayableCards(self):
+        """
+        Get a list of all currently playable cards
+        @return: list of Cards
+        """
+
+        playableCards = [firework.getNextCard() for (colour, firework) in self.fireworks.items()]
+        return playableCards
+
+    def isUseless(self, card):
+        """
+        Check whether a given card is a dead card
+        """
+
+        return card in self.playedCards or card in self.discardPile.deadCards
+
+    def isCritical(self, card):
+        """
+        Check whether there is only 1 left of the given card
+        """
+
+        if card in self.discardPile.getCriticalCards():
+            return True
+        else:
+            return False
+
+    def hasCard(self, playerID, card):
+        """
+        Query whether player playerID has a given card
+        """
+
+        return card in self.hands[playerID]
+

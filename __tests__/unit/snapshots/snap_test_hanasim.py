@@ -542,3 +542,11 @@ snapshots['TestGameState.test_doMove_play_success 2'] = [
 snapshots['TestGameState.test_doMove_play_success 3'] = set([
     GenericRepr('Y2')
 ])
+
+snapshots['TestGameState.test_getPlayableCards 1'] = [
+    GenericRepr('R1'),
+    GenericRepr('G1'),
+    GenericRepr('B1'),
+    GenericRepr('Y1'),
+    GenericRepr('P1')
+]

@@ -9,18 +9,6 @@ HANDSIZE = {2: 5,
             4: 4,
             5: 4}
 
-logLevel = logging.INFO
-
-formatter = logging.Formatter('%(name)s:%(levelname)s:%(message)s')
-fh = logging.FileHandler(filename='hanabi.log', mode='w')
-fh.setLevel(logLevel)
-fh.setFormatter(formatter)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logLevel)
-logger.addHandler(fh)
-
-
 class TestGameState:
 
     def setup_method(self):
@@ -29,7 +17,7 @@ class TestGameState:
         self.nPlayers = 5
         self.handSize = 4
         self.seed = 0
-        self.game = hs.GameState(self.nPlayers, self.handSize, self.seed, deck=None, logger=logger)
+        self.game = hs.GameState(self.nPlayers, self.handSize, self.seed, deck=None)
         self.game.setup()
 
     def teardown_method(self):
@@ -37,6 +25,11 @@ class TestGameState:
 
     @pytest.mark.parametrize("nPlayers", [2, 3, 4, 5])
     def test_init(self, nPlayers):
+        """
+        Test that game initializes successfully
+        @param nPlayers: Number of players in the game
+        @return: None
+        """
         handSize = HANDSIZE[nPlayers]
         seed = 0
 
@@ -48,11 +41,24 @@ class TestGameState:
         assert game.strikes == 0
         assert game.score == 0
 
+    @pytest.mark.parametrize("nPlayers", [1, 6])
+    @pytest.mark.parametrize("handSize", [3, 6])
+    def test_init_fail(self, nPlayers, handSize):
+        """
+        Verify that game setup raises exception for invalid inputs of
+        number of players or hand sizes
+        @param nPlayers: Number of players in game
+        @param handSize: Number of cards per player hand
+        @return:
+        """
+        with pytest.raises(AssertionError):
+            hs.GameState(nPlayers, handSize)
+
     @pytest.mark.parametrize("nPlayers", [2, 3, 4, 5])
     @pytest.mark.parametrize("handSize", [4, 5])
     def test_setup(self, nPlayers, handSize, snapshot):
         seed = 0
-        game = hs.GameState(nPlayers, handSize, seed, logger=logger)
+        game = hs.GameState(nPlayers, handSize, seed)
         game.setup()
 
         snapshot.assert_match(game.deck)
@@ -60,25 +66,9 @@ class TestGameState:
         for i in range(nPlayers):
             assert (len(game.hands[i]) == handSize)
 
-    @pytest.mark.parametrize("nPlayers", [1, 6])
-    def test_init_nPlayers(self, nPlayers):
-        handSize = 4
-        seed = 0
-
-        with pytest.raises(AssertionError):
-            hs.GameState(nPlayers, handSize, seed, logger=logger)
-
-    @pytest.mark.parametrize("handSize", [3, 6])
-    def test_init_handSize(self, handSize):
-        nPlayers = 2
-        seed = 0
-        with pytest.raises(AssertionError):
-            hs.GameState(nPlayers, handSize, seed, logger=logger)
-
     def test_discard_fullhints(self, snapshot):
 
         game = self.game
-
         playerID = 0
         cardIndex = 0
         card = game.hands[playerID][cardIndex]
@@ -238,6 +228,28 @@ class TestGameState:
         fireworks = game.fireworks[colour]
         assert fireworks.getNextCard() == nextCard
 
+    def test_doMove_hint(self):
+
+        game = self.game
+        assert game.nHints == game.MAXHINTS
+
+        hint = hs.Hint(1, 1)
+        move = hs.Move(0, 'HINT', hint)
+        game.doMove(move)
+
+        assert game.nHints == game.MAXHINTS - 1
+
+    def test_doMove_hint_fail(self):
+
+        game = self.game
+        game.nHints = 0
+
+        hint = hs.Hint(1, 1)
+        move = hs.Move(0, 'HINT', hint)
+
+        with pytest.raises(Exception):
+            game.doMove(move)
+
     def test_getHands(self):
 
         game = self.game
@@ -285,6 +297,22 @@ class TestGameState:
         for card in game.discardPile.cardCounts:
             assert game.discardPile.cardCounts[card] == 0
 
+    def test_getMaxScore(self):
+
+        game = self.game
+        assert game.getMaxScore() == 25
+
+        game.discard(0, 1)
+        game.discard(1, 1)
+        game.discard(4, 1)
+
+        assert game.getMaxScore() == 20
+
+    def test_getPlayableCards(self, snapshot):
+
+        playableCards = self.game.getPlayableCards()
+        snapshot.assert_match(playableCards)
+
     def test_computePace(self):
 
         game = self.game
@@ -296,5 +324,4 @@ class TestGameState:
         game.doMove(hs.Move(0, 'DISCARD', 0))
         pace = game.computePace()
         assert pace == 9
-
 

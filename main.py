@@ -29,24 +29,29 @@ logger.addHandler(fh)
 nPlayers = 2
 handSize = HANDSIZE[nPlayers]
 seed = 0
-game = hs.GameState(nPlayers, handSize, seed, logger=None)
-game.setup()
+game = hs.GameState(nPlayers, handSize, seed, logger=logger)
 
-# Set up players
-players = [agent.Agent(ii, game) for ii in range(nPlayers)]
-
-N = 100
+N = 1000
 scores = np.zeros(N)
 times = np.zeros(N)
 for i in range(N):
+
+    # Setup game
+    game.setup()
+
+    # Setup players
+    players = [agent.Agent(ii, game) for ii in range(nPlayers)]
+
+    # Simulate game
     ply = 0
     tic = time.perf_counter()
     while (not game.isOver):
         turn = ply % nPlayers
-        ply=ply+1
+        ply += 1
         move = players[turn].findMove()
         game.doMove(move)
 
+    # Record statistics and re-set the game state
     toc = time.perf_counter()
     scores[i] = game.score
     times[i] = toc-tic

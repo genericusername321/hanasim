@@ -1,8 +1,9 @@
 import logging
 import time
 import hanasim.hanasim as hs
-import agents.cheater_discard_first as agent
+# import agents.cheater_discard_first as agent
 # import agents.cheater_smart as agent
+import agents.cheat_tobin as agent
 
 import pandas as pd
 import numpy as np
@@ -26,7 +27,7 @@ logger.setLevel(logLevel)
 logger.addHandler(fh)
 
 # Set up game
-nPlayers = 2
+nPlayers = 5
 handSize = HANDSIZE[nPlayers]
 seed = 0
 game = hs.GameState(nPlayers, handSize, seed, logger=logger)
@@ -56,7 +57,6 @@ for i in range(N):
     scores[i] = game.score
     times[i] = toc-tic
     game.reset()
-    game.setup()
 
 df = pd.DataFrame({'Scores': scores})
 print(df.describe())

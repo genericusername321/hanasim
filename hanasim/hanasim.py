@@ -418,7 +418,6 @@ class GameState:
         """
         Deals the top card of the deck to hand of playerID
         :param playerID: an integer in the range [0, nPlayers-1]
-        :return:
         """
         assert (len(self.hands[playerID]) < self.handSize)
 
@@ -430,7 +429,6 @@ class GameState:
     def addHint(self):
         """
         Increment the number of hints
-        :return:
         """
         if self.nHints < self.MAXHINTS:
             self.nHints += 1
@@ -440,7 +438,6 @@ class GameState:
     def reset(self):
         """
         Reset the game state to the original state.
-        :return:
         """
 
         self.logger.info('Resetting game state')
@@ -470,7 +467,6 @@ class GameState:
             - Creating a sorted deck
             - Setup discardPile pile
             - Dealing hands
-        :return:
         """
 
         self.logger.info('Setting up a new game')
@@ -488,7 +484,6 @@ class GameState:
     def createDeck(self):
         """
         Creates a deck of cards
-        :return:
         """
         self.deck = [Card(colour, value) for colour in COLOURS
                      for value in VALUES for _ in range(CARDCOUNTS[value])]
@@ -497,7 +492,6 @@ class GameState:
     def shuffleDeck(self):
         """
         Shuffles the deck
-        :return:
         """
         self.logger.debug('Shuffling deck...')
         self.random.shuffle(self.deck)
@@ -505,7 +499,6 @@ class GameState:
     def dealHands(self):
         """
         Deal initial hands
-        :return:
         """
         for i in range(self.handSize):
             for player in range(self.nPlayers):
@@ -514,7 +507,6 @@ class GameState:
     def getMaxScore(self):
         """
         Compute maximum achievable score
-        @return:
         """
 
         return self.discardPile.getMaxScore()
@@ -531,33 +523,24 @@ class GameState:
     def getPlayableCards(self):
         """
         Get a list of all currently playable cards
-        @return: list of Cards
         """
 
         playableCards = [firework.getNextCard() for (colour, firework) in self.fireworks.items()]
         return playableCards
 
-    def isUseless(self, card):
+    def getUsedCards(self):
         """
-        Check whether a given card is a dead card
-        """
-
-        return card in self.playedCards or card in self.discardPile.deadCards
-
-    def isCritical(self, card):
-        """
-        Check whether there is only 1 left of the given card
+        Get a set of of all cards that have been played or fully discarded
         """
 
-        if card in self.discardPile.getCriticalCards():
-            return True
-        else:
-            return False
+        playedCards = self.playedCards
+        deadCards = self.discardPile.deadCards
+        return playedCards | deadCards
 
-    def hasCard(self, playerID, card):
+    def getCriticalCards(self):
         """
-        Query whether player playerID has a given card
+        Get the set of all critical cards, i.e. the set of cards of which there is only
+        one copy left in the game.
         """
 
-        return card in self.hands[playerID]
-
+        return self.discardPile.getCriticalCards()

@@ -388,7 +388,7 @@ class GameState:
         else:
             self.strikes += 1
             self.logger.info('Player {} fails to play {}. {} strikes'.format(
-                playerID, card.asString(), self.strikes))
+                playerID, card, self.strikes))
             self.forcedDiscard(playerID, idx)
 
     def forcedDiscard(self, playerID, index):
@@ -400,7 +400,7 @@ class GameState:
 
         card = self.hands[playerID].pop(index)
         self.discardPile.discard(card)
-        self.logger.info('Player {} discards {}'.format(playerID, card.asString()))
+        self.logger.info('Player {} discards {}'.format(playerID, card))
         self.logger.debug(f'{self.discardPile.cardCounts}')
         self.drawCard(playerID)
 
@@ -425,7 +425,7 @@ class GameState:
         if self.deck:
             card = self.deck.pop()
             self.hands[playerID].append(card)
-            self.logger.info(f'player {playerID} draws {card.asString()}')
+            self.logger.info(f'player {playerID} draws {card}')
 
     def addHint(self):
         """

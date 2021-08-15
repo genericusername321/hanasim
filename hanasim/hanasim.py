@@ -6,15 +6,11 @@ import random
 import logging
 
 # Constants
-COLOURS = ['R', 'G', 'B', 'Y', 'P']
+COLOURS = ["R", "G", "B", "Y", "P"]
 VALUES = [1, 2, 3, 4, 5]
 
 # Number of duplicates of a card with a particular value in a fresh deck
-CARDCOUNTS = {1: 3,
-              2: 2,
-              3: 2,
-              4: 2,
-              5: 1}
+CARDCOUNTS = {1: 3, 2: 2, 3: 2, 4: 2, 5: 1}
 
 
 class Card:
@@ -52,14 +48,13 @@ class Card:
         return hash((self.colour, self.value))
 
     def __str__(self):
-        return '{}{}'.format(self.colour, self.value)
+        return "{}{}".format(self.colour, self.value)
 
     def __repr__(self):
-        return '{}{}'.format(self.colour, self.value)
+        return "{}{}".format(self.colour, self.value)
 
 
 class Firework:
-
     def __init__(self, colour):
         self.colour = colour
         self.pile = []
@@ -87,7 +82,7 @@ class Firework:
         """
         Attempt to play the card on top of this pile.
         :param card: card to be played on this pile
-        :return:        Boolean value signifying the whether it the attempt is 
+        :return:        Boolean value signifying the whether it the attempt is
                         successful or not.
         """
         nextCard = self.getNextCard()
@@ -119,16 +114,15 @@ class Hint:
         :param value:   integer or char representing the hint value. Must be a
                         in VALUE or COLOURS
         """
-        assert (value in COLOURS or value in VALUES)
+        assert value in COLOURS or value in VALUES
         self.playerID = receivingPlayerID
         self.value = value
 
 
 class PlayCard:
-
     def __init__(self, index, colour):
-        assert (isinstance(index, int))
-        assert (colour in COLOURS)
+        assert isinstance(index, int)
+        assert colour in COLOURS
 
         self.index = index
         self.colour = colour
@@ -144,12 +138,14 @@ class Move:
 
         @rtype: object
         """
-        allowedMoveTypes = ['DISCARD', 'PLAY', 'HINT']
-        assert (isinstance(playerID, int))
-        assert (moveType in allowedMoveTypes)
-        assert (isinstance(moveDescription, int) or
-                isinstance(moveDescription, Hint) or
-                isinstance(moveDescription, PlayCard))
+        allowedMoveTypes = ["DISCARD", "PLAY", "HINT"]
+        assert isinstance(playerID, int)
+        assert moveType in allowedMoveTypes
+        assert (
+            isinstance(moveDescription, int)
+            or isinstance(moveDescription, Hint)
+            or isinstance(moveDescription, PlayCard)
+        )
 
         self.playerID = playerID
         self.moveType = moveType
@@ -157,7 +153,6 @@ class Move:
 
 
 class DiscardPile:
-
     def __init__(self, maxCardCounts):
         """
         Constructor for the DiscardPile class
@@ -203,13 +198,15 @@ class DiscardPile:
         cards
         """
 
-        assert (card in self.cardCounts)
+        assert card in self.cardCounts
         self.cardCounts[card] += 1
         self.total += 1
 
         if self.cardCounts[card] == self.maxCardCounts.get(card.value):
             # Add all cards of same colour with greater value
-            deadCards = [Card(card.colour, value) for value in VALUES if value >= card.value]
+            deadCards = [
+                Card(card.colour, value) for value in VALUES if value >= card.value
+            ]
             for c in deadCards:
                 self.deadCards.add(c)
 
@@ -218,8 +215,8 @@ class DiscardPile:
         Remove a card from discard pile
         """
 
-        assert (card in self.cardCounts)
-        assert (self.cardCounts[card] > 0)
+        assert card in self.cardCounts
+        assert self.cardCounts[card] > 0
 
         self.cardCounts[card] -= 1
 
@@ -228,8 +225,11 @@ class DiscardPile:
         Retrieve a list of cards of which only 1 copy is left in the game
         """
 
-        criticalCards = [card for card in self.cardCounts if \
-                         self.cardCounts[card] == self.maxCardCounts[card.value] - 1]
+        criticalCards = [
+            card
+            for card in self.cardCounts
+            if self.cardCounts[card] == self.maxCardCounts[card.value] - 1
+        ]
         return criticalCards
 
 
@@ -241,11 +241,7 @@ class GameState:
     MAXHAND = 5
     MAXHINTS = 8
     MAXSTRIKES = 3
-    HANDSIZE = {
-        2: 5,
-        3: 5,
-        4: 4,
-        5: 4}
+    HANDSIZE = {2: 5, 3: 5, 4: 4, 5: 4}
     TOTALCARDS = 50
 
     def __init__(self, nPlayers, handSize, seed=0, deck=None, logger=None):
@@ -259,12 +255,12 @@ class GameState:
                     (colour, value)
         """
 
-        assert (isinstance(nPlayers, int))
-        assert (isinstance(handSize, int))
-        assert (isinstance(seed, int))
+        assert isinstance(nPlayers, int)
+        assert isinstance(handSize, int)
+        assert isinstance(seed, int)
 
-        assert (self.MINPLAYERS <= nPlayers <= self.MAXPLAYERS)
-        assert (self.MINHAND <= handSize <= self.MAXHAND)
+        assert self.MINPLAYERS <= nPlayers <= self.MAXPLAYERS
+        assert self.MINHAND <= handSize <= self.MAXHAND
 
         self.isOver = False
 
@@ -325,26 +321,28 @@ class GameState:
         :param move: object of class Move
         """
 
-        assert (isinstance(move, Move))
+        assert isinstance(move, Move)
         moveType = move.moveType
 
-        self.logger.info(f'Turn {self.turn}: Player {self.turn % self.nPlayers}')
-        self.logger.debug(f'Hand: {self.hands[self.turn % self.nPlayers]}')
-        self.logger.debug(f'Fireworks: {self.fireworks}')
+        self.logger.info(f"Turn {self.turn}: Player {self.turn % self.nPlayers}")
+        self.logger.debug(f"Hand: {self.hands[self.turn % self.nPlayers]}")
+        self.logger.debug(f"Fireworks: {self.fireworks}")
 
         # Correct player trying to make the move
         assert move.playerID == self.playerTurn
 
         # Resolve move depending on movetype
-        if moveType == 'DISCARD':
+        if moveType == "DISCARD":
             self.discard(move.playerID, move.moveDescription)
-        elif moveType == 'PLAY':
-            self.playCard(move.playerID, move.moveDescription.index, move.moveDescription.colour)
-        elif moveType == 'HINT':
+        elif moveType == "PLAY":
+            self.playCard(
+                move.playerID, move.moveDescription.index, move.moveDescription.colour
+            )
+        elif moveType == "HINT":
             assert self.nHints > 0
             self.nHints -= 1
         else:
-            raise ValueError('Illegal move type')
+            raise ValueError("Illegal move type")
 
         self.moveHistory.append(move)
         self.turn += 1
@@ -356,11 +354,11 @@ class GameState:
 
         if not self.deck:
             self.turnAfterEmpty -= 1
-            self.logger.info(f'Deck is empty, {self.turnAfterEmpty} turns left!')
+            self.logger.info(f"Deck is empty, {self.turnAfterEmpty} turns left!")
 
         if self.turnAfterEmpty == 0:
             self.isOver = True
-            self.logger.info(f'Game is over! Score: {self.score}')
+            self.logger.info(f"Game is over! Score: {self.score}")
 
     def playCard(self, playerID, idx, colour):
         """
@@ -371,7 +369,7 @@ class GameState:
         :return:
         """
         # Check that the index refers to a valid card
-        assert (idx < len(self.hands[playerID]))
+        assert idx < len(self.hands[playerID])
 
         # Pop the card from the player hand
         card = self.hands[playerID][idx]
@@ -380,15 +378,20 @@ class GameState:
             self.playedCards.add(card)
             self.hands[playerID].pop(idx)
             self.score += 1
-            self.logger.info('Player {} successfully plays {}'.format(playerID, str(card)))
+            self.logger.info(
+                "Player {} successfully plays {}".format(playerID, str(card))
+            )
             if card.value == 5:
                 self.addHint()
 
             self.drawCard(playerID)
         else:
             self.strikes += 1
-            self.logger.info('Player {} fails to play {}. {} strikes'.format(
-                playerID, card, self.strikes))
+            self.logger.info(
+                "Player {} fails to play {}. {} strikes".format(
+                    playerID, card, self.strikes
+                )
+            )
             self.forcedDiscard(playerID, idx)
 
     def forcedDiscard(self, playerID, index):
@@ -400,8 +403,8 @@ class GameState:
 
         card = self.hands[playerID].pop(index)
         self.discardPile.discard(card)
-        self.logger.info('Player {} discards {}'.format(playerID, card))
-        self.logger.debug(f'{self.discardPile.cardCounts}')
+        self.logger.info("Player {} discards {}".format(playerID, card))
+        self.logger.debug(f"{self.discardPile.cardCounts}")
         self.drawCard(playerID)
 
     def discard(self, playerID, index):
@@ -419,12 +422,12 @@ class GameState:
         Deals the top card of the deck to hand of playerID
         :param playerID: an integer in the range [0, nPlayers-1]
         """
-        assert (len(self.hands[playerID]) < self.handSize)
+        assert len(self.hands[playerID]) < self.handSize
 
         if self.deck:
             card = self.deck.pop()
             self.hands[playerID].append(card)
-            self.logger.info(f'player {playerID} draws {card}')
+            self.logger.info(f"player {playerID} draws {card}")
 
     def addHint(self):
         """
@@ -433,14 +436,16 @@ class GameState:
         if self.nHints < self.MAXHINTS:
             self.nHints += 1
 
-        self.logger.info('A hint has been added. There are {} hints available'.format(self.nHints))
+        self.logger.info(
+            "A hint has been added. There are {} hints available".format(self.nHints)
+        )
 
     def reset(self):
         """
         Reset the game state to the original state.
         """
 
-        self.logger.info('Resetting game state')
+        self.logger.info("Resetting game state")
 
         self.nHints = 8
         self.strikes = 0
@@ -469,7 +474,7 @@ class GameState:
             - Dealing hands
         """
 
-        self.logger.info('Setting up a new game')
+        self.logger.info("Setting up a new game")
 
         # Create a shuffled deck if no deck is provided
         if self.deck is None:
@@ -479,21 +484,25 @@ class GameState:
         # Deal from deck into hands
         self.hands = [[] for _ in range(self.nPlayers)]
         self.dealHands()
-        self.logger.info(f'Game setup complete. Game starting now...')
+        self.logger.info(f"Game setup complete. Game starting now...")
 
     def createDeck(self):
         """
         Creates a deck of cards
         """
-        self.deck = [Card(colour, value) for colour in COLOURS
-                     for value in VALUES for _ in range(CARDCOUNTS[value])]
-        self.logger.info('Creating deck...')
+        self.deck = [
+            Card(colour, value)
+            for colour in COLOURS
+            for value in VALUES
+            for _ in range(CARDCOUNTS[value])
+        ]
+        self.logger.info("Creating deck...")
 
     def shuffleDeck(self):
         """
         Shuffles the deck
         """
-        self.logger.debug('Shuffling deck...')
+        self.logger.debug("Shuffling deck...")
         self.random.shuffle(self.deck)
 
     def dealHands(self):
@@ -525,7 +534,9 @@ class GameState:
         Get a list of all currently playable cards
         """
 
-        playableCards = [firework.getNextCard() for (colour, firework) in self.fireworks.items()]
+        playableCards = [
+            firework.getNextCard() for (colour, firework) in self.fireworks.items()
+        ]
         return playableCards
 
     def getUsedCards(self):

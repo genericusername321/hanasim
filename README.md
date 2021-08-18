@@ -1,4 +1,6 @@
 # hanasim
 
 TODO:
-* Implement parallel simulation processing in main script
+[ ] Implement game logic
+[ ] Implement agents
+[ ] Implement main script

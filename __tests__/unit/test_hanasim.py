@@ -1,327 +1,130 @@
-import hanasim.hanasim as hs
-import agents.cheater_discard_first as agent
 import pytest
-import logging
-
-# Number of cards each player has in their hand
-HANDSIZE = {2: 5,
-            3: 5,
-            4: 4,
-            5: 4}
-
-class TestGameState:
-
-    def setup_method(self):
-
-        # Configure logger
-        self.nPlayers = 5
-        self.handSize = 4
-        self.seed = 0
-        self.game = hs.GameState(self.nPlayers, self.handSize, self.seed, deck=None)
-        self.game.setup()
-
-    def teardown_method(self):
-        del self.game
-
-    @pytest.mark.parametrize("nPlayers", [2, 3, 4, 5])
-    def test_init(self, nPlayers):
-        """
-        Test that game initializes successfully
-        @param nPlayers: Number of players in the game
-        @return: None
-        """
-        handSize = HANDSIZE[nPlayers]
-        seed = 0
-
-        game = hs.GameState(nPlayers, handSize, seed)
-
-        assert game.nPlayers == nPlayers
-        assert game.handSize == handSize
-        assert game.nHints == 8
-        assert game.strikes == 0
-        assert game.score == 0
-
-    @pytest.mark.parametrize("nPlayers", [1, 6])
-    @pytest.mark.parametrize("handSize", [3, 6])
-    def test_init_fail(self, nPlayers, handSize):
-        """
-        Verify that game setup raises exception for invalid inputs of
-        number of players or hand sizes
-        @param nPlayers: Number of players in game
-        @param handSize: Number of cards per player hand
-        @return:
-        """
-        with pytest.raises(AssertionError):
-            hs.GameState(nPlayers, handSize)
-
-    @pytest.mark.parametrize("nPlayers", [2, 3, 4, 5])
-    @pytest.mark.parametrize("handSize", [4, 5])
-    def test_setup(self, nPlayers, handSize, snapshot):
-        seed = 0
-        game = hs.GameState(nPlayers, handSize, seed)
-        game.setup()
-
-        snapshot.assert_match(game.deck)
-        assert (len(game.hands) == nPlayers)
-        for i in range(nPlayers):
-            assert (len(game.hands[i]) == handSize)
-
-    def test_discard_fullhints(self, snapshot):
-
-        game = self.game
-        playerID = 0
-        cardIndex = 0
-        card = game.hands[playerID][cardIndex]
-        game.discard(playerID, cardIndex)
-
-        snapshot.assert_match(game.deck)
-        snapshot.assert_match(game.hands[playerID])
-        assert game.discardPile.cardCounts[card] == 1
-        assert game.nHints == 8
-
-    def test_discard_addhint(self, snapshot):
-
-        # Set number of hints to 0
-        game = self.game
-        game.nHints = 0
-
-        playerID = 0
-        cardIndex = 0
-        card = game.hands[playerID][cardIndex]
-        game.discard(playerID, cardIndex)
-
-        snapshot.assert_match(game.deck)
-        snapshot.assert_match(game.hands[playerID])
-        assert game.nHints == 1
-        assert game.discardPile.cardCounts[card] == 1
-
-    def test_force_discard(self):
-
-        # Set number of hints to 0
-        game = self.game
-        game.nHints = 0
-
-        playerID = 0
-        cardIndex = 0
-        card = game.hands[playerID][cardIndex]
-        game.forcedDiscard(playerID, cardIndex)
+import random
+import hanasim.hanasim as hs
 
-        assert game.nHints == 0
-        assert game.discardPile.cardCounts[card] == 1
 
-    def test_play_fail(self, snapshot):
+@pytest.fixture()
+def setup():
+    """Create a pre-defined deck where the cards are in known order"""
+
+    deck = [
+        (colour, rank)
+        for rank in range(1, hs.Board.MAXRANK + 1)
+        for colour in range(hs.Board.MAXCOLOUR + 1)
+    ]
+
+    for _ in range(hs.Board.NUMCARDS - (hs.Board.MAXCOLOUR + 1) * hs.Board.MAXRANK):
+        deck.append((0, 1))
 
-        # Set number of hints to 0
-        game = self.game
-        game.nHints = 0
+    yield deck
 
-        playerID = 0
-        cardID = 3
-        colour = 'R'
-        card = game.hands[playerID][cardID]
-        fireworks = game.fireworks[colour]
 
-        game.playCard(playerID, cardID, colour)
+@pytest.mark.parametrize("num_players", [2, 3, 4, 5])
+def test_init_random_deck(num_players):
+    """Test that game initializes correctly for a random deck
+    @param num_players: number of players in game
+    @return: None
+    """
 
-        snapshot.assert_match(game.deck)
-        snapshot.assert_match(game.hands[playerID])
-        assert game.discardPile.cardCounts[card] == 1
-        assert game.strikes == 1
-        assert game.nHints == 0
-        assert game.score == 0
-        assert fireworks.getTopCard() is None
+    hand_size = {2: 5, 3: 5, 4: 4, 5: 4}
 
-    def test_play_succeed(self, snapshot):
+    game = hs.Board(num_players)
+    game.generate_deck()
+    game.deal()
 
-        game = self.game
-        game.nHints = 0
+    assert game.num_players == num_players
+    assert game.bonus_turns == num_players
+    assert game.num_hints == 8
+    assert game.strikes == 0
 
-        playerID = 0
-        cardID = 1
-        colour = 'Y'
-        fireworks = game.fireworks[colour]
-        card = game.hands[playerID][cardID]
+    # Check that deck has been correctly dealt
+    assert len(game.deck) == game.NUMCARDS
+    assert len(game.player_hands) == num_players
+    assert len(game.player_hints) == num_players
+    assert game.index == num_players * hand_size[num_players]
+    for i in range(num_players):
+        assert len(game.player_hands[i]) == hand_size[num_players]
+        assert len(game.player_hints[i]) == len(game.player_hands[i])
 
-        game.playCard(playerID, cardID, colour)
 
-        nextCard = hs.Card(card.colour, card.value+1)
+def test_init_deck(setup):
+    """Test that game initializes correctly for a given deck
+    @param setup: test fixture
+    """
 
-        assert game.strikes == 0
-        assert game.nHints == 0
-        assert game.score == 1
-        assert fireworks.getNextCard() == nextCard
-        snapshot.assert_match(game.deck)
-        snapshot.assert_match(game.hands[playerID])
+    my_deck = setup
+    reference = my_deck[:]
+    game = hs.Board(2, my_deck)
+    assert game.deck == reference
 
-        print(game.playedCards)
 
-        assert game.playedCards == {hs.Card('Y', 1)}
+def test_draw(setup):
+    """Test drawing a card from the deck
+    @param setup: test fixture
+    """
 
-    def test_addhint(self):
+    game = hs.Board(2, setup)
+    game.draw(0)
 
-        game = self.game
-        game.addHint()
-        assert game.nHints == 8
+    assert game.player_hands[0] == [0]
+    assert game.index == 1
 
-        game.nHints = 0
-        game.addHint()
-        assert game.nHints == 1
 
-    def test_doMove_discard(self, snapshot):
+def test_draw_empty(setup):
+    """Test drawing a card from the deck with empty deck
+    @param setup: text fixture
+    """
 
-        game = self.game
-        game.nHints = 0
+    game = hs.Board(2, setup)
+    assert game.bonus_turns == 2
 
-        playerID = 0
-        moveType = 'DISCARD'
-        index = 0
-        move = hs.Move(playerID, moveType, index)
-        game.doMove(move)
+    game.index = 50
+    game.draw(0)
+    assert game.index == 50
+    assert game.player_hands[0] == []
+    assert game.bonus_turns == 1
 
-        assert game.nHints == 1
-        snapshot.assert_match(game.deck)
-        snapshot.assert_match(game.hands[playerID])
+    game.index = 50
+    game.draw(0)
+    assert game.index == 50
+    assert game.player_hands[0] == []
+    assert game.bonus_turns == 0
+    assert game.game_over
 
-    def test_doMove_play_success(self, snapshot):
 
-        game = self.game
-        game.nHints = 0
+def test_play_success(setup):
+    """Test playing a card
+    @param setup: test fixture
+    """
+    # Setup game
+    game = hs.Board(5, setup)
+    game.deal()
+    game.num_hints = 4
 
-        moveType = 'PLAY'
-        playerID = 0
-        cardIndex = 1
-        colour = 'Y'
-        fireworks = game.fireworks[colour]
-        card = game.hands[playerID][cardIndex]
+    # Each player plays a card
+    for rank in range(1, hs.Board.MAXRANK + 1):
+        for colour in range(hs.Board.MAXCOLOUR + 1):
+            action = (hs.PLAY, 0, colour)
+            game.resolve_move(colour, action)
 
-        move = hs.Move(playerID, moveType, hs.PlayCard(cardIndex, colour))
-        game.doMove(move)
+            assert len(game.player_hands[colour]) == 4
+            assert game.fireworks[colour][1] == rank
+            assert game.turn == (rank - 1) * (hs.Board.MAXCOLOUR + 1) + colour + 1
 
-        nextCard = card
-        nextCard.value += 1
+    assert game.num_hints == 8
 
-        assert game.strikes == 0
-        assert game.nHints == 0
-        assert game.score == 1
-        assert fireworks.getNextCard() == nextCard
-        snapshot.assert_match(game.deck)
-        snapshot.assert_match(game.hands[playerID])
-        snapshot.assert_match(game.playedCards)
 
-    def test_doMove_play_fail(self):
+def test_play_fail(setup):
+    """Test that a strike is issued when playing an illegal card
+    @param setup: test fixture
+    """
 
-        game = self.game
-        game.nHints = 0
+    game = hs.Board(5, setup)
+    game.deal()
 
-        moveType = 'PLAY'
-        playerID = 0
-        cardIndex = 1
-        colour = 'Y'
-        card = game.hands[playerID][cardIndex]
+    action = (hs.PLAY, 1, 0)
+    game.resolve_move(0, action)
 
-        move = hs.Move(playerID, moveType, hs.PlayCard(cardIndex, colour))
-        game.doMove(move)
-
-        nextCard = card
-        nextCard.value += 1
-
-        fireworks = game.fireworks[colour]
-        assert fireworks.getNextCard() == nextCard
-
-    def test_doMove_hint(self):
-
-        game = self.game
-        assert game.nHints == game.MAXHINTS
-
-        hint = hs.Hint(1, 1)
-        move = hs.Move(0, 'HINT', hint)
-        game.doMove(move)
-
-        assert game.nHints == game.MAXHINTS - 1
-
-    def test_doMove_hint_fail(self):
-
-        game = self.game
-        game.nHints = 0
-
-        hint = hs.Hint(1, 1)
-        move = hs.Move(0, 'HINT', hint)
-
-        with pytest.raises(Exception):
-            game.doMove(move)
-
-    def test_getHands(self):
-
-        game = self.game
-
-        requestPlayerID = 0
-        targetPlayerID = 1
-
-        hand = game.getPlayerHand(requestPlayerID, targetPlayerID)
-        assert hand == game.hands[targetPlayerID]
-
-        with pytest.raises(ValueError):
-            game.getPlayerHand(0, 0)
-
-    def test_reset(self):
-
-        game = self.game
-
-        # Play a game
-        players = [agent.Agent(playerID, game) for playerID in range(game.nPlayers)]
-
-        ply = 0
-        while not game.isOver:
-            turn = ply % game.nPlayers
-            ply = ply + 1
-            move = players[turn].findMove()
-            game.doMove(move)
-
-        print("The final score is: {}".format(game.score))
-
-        game.reset()
-
-        # Verify that game is in original state
-        assert game.isOver is False
-        assert game.nHints == 8
-        assert game.strikes == 0
-        assert game.turn == 0
-        assert game.playerTurn == 0
-        assert game.turnAfterEmpty == game.nPlayers
-        assert not game.deck
-        assert not game.moveHistory
-
-        for hand in game.hands:
-            assert not hand
-
-        for card in game.discardPile.cardCounts:
-            assert game.discardPile.cardCounts[card] == 0
-
-    def test_getMaxScore(self):
-
-        game = self.game
-        assert game.getMaxScore() == 25
-
-        game.discard(0, 1)
-        game.discard(1, 1)
-        game.discard(4, 1)
-
-        assert game.getMaxScore() == 20
-
-    def test_getPlayableCards(self, snapshot):
-
-        playableCards = self.game.getPlayableCards()
-        snapshot.assert_match(playableCards)
-
-    def test_computePace(self):
-
-        game = self.game
-        pace = game.computePace()
-
-        assert pace == 10
-
-        # Discard something
-        game.doMove(hs.Move(0, 'DISCARD', 0))
-        pace = game.computePace()
-        assert pace == 9
-
+    assert game.fireworks[0] == [0, 0]
+    assert game.strikes == 1
+    assert game.player_hands[0] == [0, 10, 15, 20]

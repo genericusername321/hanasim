@@ -157,6 +157,7 @@ class Board:
         # Play the card
         self.player_hands[player].pop(target)  # Remove card from hand
         self.fireworks[value][1] += 1  # Add card to firework
+        self.score += 1
         self.draw(player)
 
         # A hint is obtained if the firework is completed

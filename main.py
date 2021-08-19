@@ -1,66 +1,42 @@
-import logging
 import time
 import hanasim.hanasim as hs
-# import agents.cheater_discard_first as agent
-# import agents.cheater_smart as agent
-import agents.cheat_tobin as agent
+import agents.cheater_discard_first as agent
 
 import pandas as pd
 import numpy as np
 
-# Number of cards each player has in their hand
-HANDSIZE = {2: 5,
-            3: 5,
-            4: 4,
-            5: 4}
 
-# Configure logger
-logLevel = logging.DEBUG
+def play_game(num_players):
 
-formatter = logging.Formatter('%(levelname)s:%(message)s')
-fh = logging.FileHandler(filename='hanabi.log', mode='w')
-fh.setLevel(logLevel)
-fh.setFormatter(formatter)
+    game = hs.Board(num_players)
+    game.generate_deck()
+    game.deal()
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logLevel)
-logger.addHandler(fh)
+    players = [agent.Agent(ii, game) for ii in range(num_players)]
 
-# Set up game
-nPlayers = 5
-handSize = HANDSIZE[nPlayers]
-seed = 0
-game = hs.GameState(nPlayers, handSize, seed, logger=logger)
+    turn = 0
+    while not game.game_over:
+        player_id = turn % num_players
+        action = players[player_id].find_move(game)
+        game.resolve_move(player_id, action)
 
-N = 1000
-scores = np.zeros(N)
-times = np.zeros(N)
-for i in range(N):
+    return game.score
 
-    # Setup game
-    game.setup()
+if __name__ == "__main__":
+    N = 10
+    scores = np.zeros(N)
+    times = np.zeros(N)
 
-    # Setup players
-    players = [agent.Agent(ii, game) for ii in range(nPlayers)]
+    for i in range(N):
+        tic = time.perf_counter()
+        scores[i] = play_game(2)
+        toc = time.perf_counter()
+        times[i] = toc-tic
 
-    # Simulate game
-    ply = 0
-    tic = time.perf_counter()
-    while (not game.isOver):
-        turn = ply % nPlayers
-        ply += 1
-        move = players[turn].findMove()
-        game.doMove(move)
 
-    # Record statistics and re-set the game state
-    toc = time.perf_counter()
-    scores[i] = game.score
-    times[i] = toc-tic
-    game.reset()
+    df = pd.DataFrame({'Scores': scores})
+    print(df.describe())
 
-df = pd.DataFrame({'Scores': scores})
-print(df.describe())
-
-dfTime = pd.DataFrame({'Time': times})
-print(dfTime.describe())
+    dfTime = pd.DataFrame({'Time': times})
+    print(dfTime.describe())
 

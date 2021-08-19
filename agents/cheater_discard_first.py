@@ -1,18 +1,11 @@
-# A cheating hanabi agent
-
 import hanasim.hanasim as hs
 
 class Agent:
     """
-    This agent cheats by inspecting its own
-    hand to find a card that can be played, eliminating the need 
-    to be hinted, as such it also does not hint other players. It 
-    performs actions with the following priority:
-        1. Finds card to play in own hand
-        2. If no card is playable, discard
-
-    If no card can be played, it will discard the first card in its
-    hand.
+    This agent cheats by looking at its own hand. It uses the following
+    strategy:
+        1. Plays first playable card in hand
+        2. Discard first card
     """
 
 
@@ -20,9 +13,8 @@ class Agent:
     def __init__(self, playerID, game):
 
         self.playerID = playerID
-        self.game = game
 
-    def findMove(self):
+    def find_move(self, game):
         """
         Computes move according to priorities set in class description
 
@@ -30,25 +22,16 @@ class Agent:
         """
 
         # Cheat by accessing our own hand.
-        hand = self.game.hands[self.playerID]
+        my_hand = game.player_hands[self.playerID]
+        my_cards = [game.deck[index] for index in my_hand]
+        print(my_cards)
 
-        # Check whether we have any card that can be played
-        for colour in hs.COLOURS:
-            nextCard = self.game.fireworks[colour].getNextCard()
+        for colour, firework in game.fireworks.items():
+            for index, card in enumerate(my_cards):
+                if card[0] == colour and card[1] == firework[1] + 1:
+                    action = (hs.PLAY, index, card[0])
+                    return action
 
-            try:
-                cardIndex = hand.index(nextCard)
-            except ValueError:
-                cardIndex = None
-
-            if cardIndex is not None:
-                move = hs.Move(self.playerID, 'PLAY', hs.PlayCard(cardIndex, colour))
-                return move
-
-        # Discard the first card.
-        move = hs.Move(self.playerID, 'DISCARD', 0)
-        return move
-
-
-
-
+        # Discard first card
+        action = (hs.DISCARD, 0, None)
+        return action

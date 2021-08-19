@@ -1,32 +1,7 @@
 """ hanasim is a hanabi game engine
 
-hanasim aims to be a fast hanabi engine to run hanabi simulations for user agents
-implementing various hanabi strategies. To be fast, datatypes are implemented
-as follows:
-    - Cards are represented as tuples (colour, rank). Colours can range from
-      0 to 4 and the rank varies from 1 to 5, following hanabi-live convention.
-
-    - Fireworks are represented as a tuple (colour, rank), where the rank is the
-      rank of the highest card currently on the firework.
-
-    - Actions are presented as a tuple (type, target, value). List of actions
-      types:
-        0. Play: target refers to the index of the card to be played, in the
-           hand of the player whose turn it is. Value indicates the colour.
-        1. Discard: target refers to the card that is being discarded. Value
-           is true if voluntary discard, false for a strike
-        2. Colour clue: target refers to receiving player, 0 - 1st player, 1 - 2nd
-           player etc. Value refers to the colour in [0..4]
-        3. Value clue: target refers to receiving player, value in [1..5]
-        4. Game end: target refers to player ending game, value corresponds to
-           end game reason:
-            1: for normal end (deck empty / completed all fireworks?)
-            2: strikeout
-            3: timeout
-
-For visualisation purposes, hanasim can write a JSON dump compatible with the
-hanabi-live replay viewer.
-
+hanasim aims to be a fast hanabi engine to run simulations for user agents
+that implement hanabi strategies.
 """
 
 import random
@@ -39,7 +14,7 @@ HINTRANK = 3
 
 
 class Board:
-    """Board implements the game logic for a game of Hanabi"""
+    """Board implements Hanabi game logic"""
 
     MAXHINTS = 8
     MAXSTRIKES = 3
@@ -82,7 +57,7 @@ class Board:
 
         # player hands contain the index to the card in the deck
         self.player_hands = [[] for _ in range(self.num_players)]
-        self.player_hints = [[] for _ in range(self.num_players)]
+        self.player_hints = [[None, None] for _ in range(self.NUMCARDS)]
 
         # data for faster bookkeeping
         self.action_history = []
@@ -120,7 +95,6 @@ class Board:
             return
 
         self.player_hands[player].append(self.index)
-        self.player_hints[player].append([None, None])
         self.index += 1
 
     def resolve_move(self, player, action_attempt):
@@ -140,10 +114,14 @@ class Board:
             action = self.discard(player, target)
 
         elif action_type == HINTCOLOUR:
+            assert player != target
+            assert self.num_hints > 0
             self.hint_colour(target, value)
             action = (HINTCOLOUR, value)
 
         elif action_type == HINTRANK:
+            assert player != target
+            assert self.num_hints > 0
             self.hint_rank(target, value)
             action = (HINTRANK, value)
 
@@ -205,22 +183,27 @@ class Board:
         self.draw(player)
         return (DISCARD, card_index)
 
+    def hint_any(self, player, value, hint_type):
+        """Provide a hint to a player
+
+        :param player: player to receive hint
+        :param value: the colour or rank to hint
+        :hint type: 0 indicates colour hint, 1 indicates rank hint
+        """
+        self.num_hints -= 1
+
+        for index in self.player_hands[player]:
+            card = self.deck[index]
+            if card[hint_type] == value:
+                self.player_hints[index][hint_type] = value
+
     def hint_colour(self, player, value):
         """Provide a colour hint to a player
 
         :param player: index of player receiving hint
         :param value: colour to hint
-
-        We can probably make the hint_colour and hint_rank methods smarter
-        by implementing a hash table that maps deck index to colours or
-        rank respectively. That would avoid iterating over the cards.
-        Perhaps we should use a mutable datastructure to hold the information?
         """
-
-        card_colours = [self.deck[index][0] for index in self.player_hands[player]]
-        for i, colour in enumerate(card_colours):
-            if colour == value:
-                self.player_hints[i][0] = value
+        self.hint_any(player, value, 0)
 
     def hint_rank(self, player, value):
         """Provide a rank hint to a player
@@ -228,8 +211,4 @@ class Board:
         :param player: index of player receiving hint
         :param value: rank to hint
         """
-
-        card_ranks = [self.deck[index][1] for index in self.player_hands[player]]
-        for i, rank in enumerate(card_ranks):
-            if rank == value:
-                self.player_hints[i][1] = value
+        self.hint_any(player, value, 1)

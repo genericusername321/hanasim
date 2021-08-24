@@ -31,7 +31,9 @@ if __name__ == "__main__":
     num_players = 5
 
     pool_obj = multiprocessing.Pool()
-    scores = np.array(pool_obj.map(play_game, [num_players for _ in range(N)], chunksize=100))
+    scores = np.array(
+        pool_obj.map(play_game, [num_players for _ in range(N)], chunksize=100)
+    )
 
     df = pd.DataFrame({"Scores": scores})
     print(df.describe())

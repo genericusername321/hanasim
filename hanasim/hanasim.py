@@ -48,7 +48,7 @@ class Board:
         self.bonus_turns = num_players
         self.index = 0
         self.deck = deck
-        self.fireworks = {i: [i, 0] for i in range(self.MAXCOLOUR + 1)}
+        self.fireworks = [0 for _ in range(self.MAXCOLOUR + 1)]
         self.discard_pile = {
             (colour, rank): 0
             for colour in range(self.MAXCOLOUR + 1)
@@ -61,13 +61,27 @@ class Board:
 
         # data for faster bookkeeping
         self.action_history = []
-        self.played_cards = set()
+        self.dead_cards = set()
+        self.critical_cards = set()
         self.cards_on_table = {
             (colour, rank): self.CARDCOUNTS[rank]
             for colour in range(self.MAXCOLOUR + 1)
             for rank in range(1, self.MAXRANK + 1)
         }
-        self.critical_cards = set()
+
+    def setup(self):
+        """Generate deck and deal cards"""
+        if not self.deck:
+            self.generate_deck()
+
+        # Find all critical cards
+        card_deck = [self.deck[i] for i in range(len(self.deck))]
+
+        for card in card_deck:
+            if self.CARDCOUNTS[card[1]] == 1:
+                self.critical_cards.add(card)
+
+        self.deal()
 
     def generate_deck(self):
         """Generate a shuffled deck of Hanabi cards"""
@@ -148,20 +162,23 @@ class Board:
         action = (PLAY, card_index, None)
 
         # If card is illegal, discard with strike
-        if card[0] != value or card[1] != self.fireworks[value][1] + 1:
+        if card[0] != value or card[1] != self.fireworks[value] + 1:
             # Discard the card without hint
             self.discard(player, target)
             self.strikes += 1
             return action
 
         # Play the card
-        self.player_hands[player].pop(target)  # Remove card from hand
-        self.fireworks[value][1] += 1  # Add card to firework
+        self.player_hands[player].pop(target)
+        self.fireworks[value] += 1
+        self.dead_cards.add(card)
         self.score += 1
         self.draw(player)
+        if card in self.critical_cards:
+            self.critical_cards.remove(card)
 
         # A hint is obtained if the firework is completed
-        if self.fireworks[value][1] == self.MAXRANK and self.num_hints < 8:
+        if self.fireworks[value] == self.MAXRANK and self.num_hints < 8:
             self.num_hints += 1
 
         return action
@@ -180,8 +197,17 @@ class Board:
         # move card onto discard pile
         card = self.deck[card_index]
         self.discard_pile[card] += 1
-
         self.draw(player)
+
+        num_discarded = self.discard_pile[card]
+        num_left = self.CARDCOUNTS[card[1]] - num_discarded
+        if num_left == 1:
+            self.critical_cards.add(card)
+
+        if num_left == 0:
+            self.critical_cards.remove(card)
+            self.dead_cards.add(card)
+
         return (DISCARD, card_index)
 
     def hint_any(self, player, value, hint_type):
@@ -213,3 +239,14 @@ class Board:
         :param value: rank to hint
         """
         self.hint_any(player, value, 1)
+
+    @property
+    def playable_cards(self):
+        """Returns a set of all playable cards"""
+
+        playable_cards = set()
+        for colour, rank in enumerate(self.fireworks):
+            if rank + 1 <= self.MAXRANK:
+                playable_cards.add((colour, rank + 1))
+
+        return playable_cards

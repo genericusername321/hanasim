@@ -1,9 +1,12 @@
 import time
 import random
+import multiprocessing
 import pandas as pd
 import numpy as np
 import hanasim.hanasim as hs
-import agents.cheater_discard_first as agent
+
+# import agents.cheater_discard_first as agent
+import agents.cheat_tobin as agent
 
 
 def play_game(num_players):
@@ -11,7 +14,6 @@ def play_game(num_players):
     game = hs.Board(num_players)
     game.generate_deck()
     game.setup()
-
 
     players = [agent.Agent(ii, game) for ii in range(num_players)]
 
@@ -25,19 +27,11 @@ def play_game(num_players):
 
 if __name__ == "__main__":
     random.seed(0)
-    N = 10000
-    num_players = 2
-    scores = np.zeros(N)
-    times = np.zeros(N)
+    N = 100000
+    num_players = 5
 
-    for i in range(N):
-        tic = time.perf_counter()
-        scores[i] = play_game(num_players)
-        toc = time.perf_counter()
-        times[i] = toc - tic
+    pool_obj = multiprocessing.Pool()
+    scores = np.array(pool_obj.map(play_game, [num_players for _ in range(N)], chunksize=100))
 
     df = pd.DataFrame({"Scores": scores})
     print(df.describe())
-
-    dfTime = pd.DataFrame({"Time": times})
-    print(dfTime.describe())

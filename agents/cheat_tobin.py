@@ -1,9 +1,10 @@
 import hanasim.hanasim as hs
 
+
 class Agent:
     """
     Cheating Hanasim player that applies the following strategy:
-        1. Play card with lowest value
+        1. Play a card
         2. Discard dead card, conditional on pace
         3. Hint
         4. Discard dead card
@@ -14,83 +15,77 @@ class Agent:
     This player cheats by inspecting its own hand.
     """
 
-    def __init__(self, playerID, game):
-        self.playerID = playerID
-        self.game = game
+    def __init__(self, player_id, game):
+        self.player_id = player_id
 
-    def findMove(self):
-        """
-        Computes move according to given priorities
-        """
+    def find_move(self, game):
 
-        myHand = self.game.hands[self.playerID]
+        indices = game.player_hands[self.player_id]
+        hand = [game.deck[i] for i in indices]
 
-        # 1. Attempt to play smallest card
-        legalCards = self.game.getPlayableCards()
-        playableCards = [card for card in myHand if card in legalCards]
-        if playableCards:
-            bestCard = min(playableCards)
-            bestIndex = myHand.index(bestCard)
-            move = hs.Move(self.playerID, 'PLAY', hs.PlayCard(bestIndex, bestCard.colour))
-            return move
+        # Find playable cards
+        playable_cards = game.playable_cards
+        for index, card in enumerate(hand):
+            if card in playable_cards:
+                action = (hs.PLAY, index, card[0])
+                return action
 
-        # 2. Attempt to discard dead card, conditional on pace
-        discardThreshold = self.game.TOTALCARDS - len(hs.COLOURS) * len(hs.VALUES) - \
-                           self.game.handSize * self.game.nPlayers
+        # Try to discard given sufficient velocity
+        discard_threshold = (
+            game.NUMCARDS
+            - (game.MAXCOLOUR + 1) * (game.MAXRANK)
+            - (game.num_players * game.handsize)
+        )
 
-        deadCard = self.findDeadCard()
-        if self.game.discardPile.total < discardThreshold and \
-                self.game.nHints < self.game.MAXHINTS:
+        if game.num_discarded < discard_threshold or game.num_hints == 0:
+            action = self.find_useless_card(game, hand)
+            if action:
+                return action
 
-            if deadCard:
-                move = hs.Move(self.playerID, 'DISCARD', deadCard)
-                return move
+        # Hint if there are hints left
+        if game.num_hints > 0:
+            action = (hs.HINTCOLOUR, (self.player_id + 1) % game.num_players, 0)
+            return action
 
-        # 3. Give a hint
-        if self.game.nHints > 0:
-            hint = hs.Hint(self.getNextPlayer(), 1)
-            move = hs.Move(self.playerID, 'HINT', hint)
-            return move
+        # Discard a duplicate if it exists
+        action = self.find_duplicate(game, hand)
+        if action:
+            return action
 
-        # 4. Discard dead card
-        if deadCard:
-            return hs.Move(self.playerID, 'DISCARD', deadCard)
+        # Discard non-critical
+        action = self.find_non_critical(game, hand)
+        if action:
+            return action
 
-        # 5. Discard duplicate
-        otherCards = self.getOtherHands()
-        duplicateCounts = {card : otherCards.count(card) for card in myHand}
-        card = max(duplicateCounts)
-        if duplicateCounts[card] > 0:
-            return hs.Move(self.playerID, 'DISCARD', myHand.index(card))
+        action = (hs.DISCARD, 0, None)
+        return action
 
-        # 6. Discard non-critical
-        criticalCards = self.game.getCriticalCards()
-        for (index, card) in enumerate(myHand):
-            if card not in criticalCards:
-                return hs.Move(self.playerID, 'DISCARD', index)
-
-        # 7. Discard first
-        return hs.Move(self.playerID, 'DISCARD', 0)
-
-
-    def findDeadCard(self):
-        deadCards = self.game.getUsedCards()
-        for index, card in enumerate(self.game.hands[self.playerID]):
-            if card in deadCards:
-                return index
+    def find_useless_card(self, game, hand):
+        """Find a card that is has been played or is otherwise dead"""
+        for index, card in enumerate(hand):
+            if card in game.played_cards or card in game.dead_cards:
+                return (hs.DISCARD, index, None)
 
         return None
 
-    def getOtherHands(self):
-        otherCards = []
-        for i in range(self.game.nPlayers):
-            if i != self.playerID:
-                otherCards += self.game.hands[i]
+    def find_non_critical(self, game, hand):
+        for index, card in enumerate(hand):
+            if card not in game.critical_cards:
+                return (hs.DISCARD, index, None)
 
-        return otherCards
+        return None
+    
+    def find_duplicate(self, game, hand):
+        """ Find a card held by another player """
+        other_hands = [game.player_hands[player] for player in 
+                range(game.num_players) if player is not self.player_id]
+        other_cards = set([game.deck[i] for hand in other_hands for i in hand])
 
-    def getNextPlayer(self):
-        return (self.playerID + 1) % self.game.nPlayers
+        for index, card in enumerate(hand):
+            if card in other_cards:
+                return (hs.DISCARD, index, None)
 
-    def throwAwayHint(self):
-        hint = hs.Hint(self.getNextPlayer(), 1)
+        return None
+
+
+

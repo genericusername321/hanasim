@@ -24,13 +24,12 @@ class Agent:
         # Cheat by accessing our own hand.
         my_hand = game.player_hands[self.playerID]
         my_cards = [game.deck[index] for index in my_hand]
-        print(my_cards)
 
-        for colour, firework in game.fireworks.items():
-            for index, card in enumerate(my_cards):
-                if card[0] == colour and card[1] == firework[1] + 1:
-                    action = (hs.PLAY, index, card[0])
-                    return action
+        for index, card in enumerate(my_cards):
+            colour, rank = card
+            if game.fireworks[colour] + 1 == rank:
+                action = (hs.PLAY, index, card[0])
+                return action
 
         # Discard first card
         action = (hs.DISCARD, 0, None)

@@ -40,6 +40,7 @@ class Board:
         # game constants
         self.num_hints = self.MAXHINTS
         self.num_players = num_players
+        self.handsize = self.HANDSIZE[self.num_players]
 
         # board data
         self.strikes = 0
@@ -61,8 +62,10 @@ class Board:
 
         # data for faster bookkeeping
         self.action_history = []
+        self.played_cards = set()
         self.dead_cards = set()
         self.critical_cards = set()
+        self.num_discarded = 0
         self.cards_on_table = {
             (colour, rank): self.CARDCOUNTS[rank]
             for colour in range(self.MAXCOLOUR + 1)
@@ -171,7 +174,7 @@ class Board:
         # Play the card
         self.player_hands[player].pop(target)
         self.fireworks[value] += 1
-        self.dead_cards.add(card)
+        self.played_cards.add(card)
         self.score += 1
         self.draw(player)
         if card in self.critical_cards:
@@ -198,6 +201,7 @@ class Board:
         card = self.deck[card_index]
         self.discard_pile[card] += 1
         self.draw(player)
+        self.num_discarded += 1
 
         num_discarded = self.discard_pile[card]
         num_left = self.CARDCOUNTS[card[1]] - num_discarded

@@ -1,3 +1,5 @@
+venv/
+*.swp
 *.log
-*.pyc
+*.py[cod]
 .ipynb_checkpoints/

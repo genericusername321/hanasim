@@ -7,13 +7,13 @@ def setup():
     """Create a pre-defined deck where the cards are in known order"""
 
     deck = [
-        (colour, rank)
-        for rank in range(1, hs.Board.MAXRANK + 1)
-        for colour in range(hs.Board.MAXCOLOUR + 1)
+        hs.Card(colour, rank)
+        for rank in hs.RANKS
+        for colour in hs.COLOURS
     ]
 
-    for _ in range(hs.Board.NUMCARDS - (hs.Board.MAXCOLOUR + 1) * hs.Board.MAXRANK):
-        deck.append((0, 1))
+    for _ in range(50 - len(hs.COLOURS) * len(hs.RANKS)):
+        deck.append(hs.Card(0, 1))
 
     yield deck
 
@@ -34,9 +34,8 @@ def test_init_random_deck(num_players):
     assert game.strikes == 0
 
     # Check that deck has been correctly dealt
-    assert len(game.deck) == game.NUMCARDS
+    assert len(game.deck) == 50
     assert len(game.player_hands) == num_players
-    assert len(game.player_hints) == game.NUMCARDS
     assert game.index == num_players * hand_size[num_players]
     for i in range(num_players):
         assert len(game.player_hands[i]) == hand_size[num_players]
@@ -62,9 +61,9 @@ def test_setup():
     assert game.deck is None
 
     game.setup()
-    assert len(game.deck) == game.NUMCARDS
+    assert len(game.deck) == 50
 
-    for colour in range(game.MAXCOLOUR + 1):
+    for colour in hs.COLOURS:
         assert (colour, 5) in game.critical_cards
 
 
@@ -106,14 +105,14 @@ def test_play_success(setup):
     game.num_hints = 4
 
     # Each player plays a card
-    for rank in range(1, hs.Board.MAXRANK + 1):
-        for colour in range(hs.Board.MAXCOLOUR + 1):
+    for rank in hs.RANKS:
+        for colour in hs.COLOURS:
             action = (hs.PLAY, 0, colour)
             game.resolve_move(colour, action)
 
             assert len(game.player_hands[colour]) == 4
             assert game.fireworks[colour] == rank
-            assert game.turn == (rank - 1) * (hs.Board.MAXCOLOUR + 1) + colour + 1
+            assert game.turn == (rank - 1) * len(hs.COLOURS) + colour + 1
 
     assert game.num_hints == 8
 
@@ -155,7 +154,7 @@ def test_discard_maxhints(setup):
     """Test that no hint is given at maximum number of hints"""
 
     game = hs.Board(5, setup)
-    game.deal()
+    game.setup()
 
     action = (hs.DISCARD, 0, None)
     game.resolve_move(0, action)
@@ -170,38 +169,38 @@ def test_hint_colour(setup):
     """Test hint_colour method"""
 
     game = hs.Board(5, setup)
-    game.deal()
+    game.setup()
 
     action = (hs.HINTCOLOUR, 0, 0)
     game.resolve_move(1, action)
 
     assert game.num_hints == 7
     assert game.turn == 1
-    for i in range(game.NUMCARDS):
+    for i in range(len(game.deck)):
         card = game.deck[i]
         if i in game.player_hands[0] and card[0] == 0:
-            assert game.player_hints[i] == [0, None]
+            assert game.player_hints[i] == (0, None)
         else:
-            assert game.player_hints[i] == [None, None]
+            assert game.player_hints[i] == (None, None)
 
 
 def test_hint_rank(setup):
     """Test hint_rank method"""
 
     game = hs.Board(5, setup)
-    game.deal()
+    game.setup()
 
     action = (hs.HINTRANK, 0, 1)
     game.resolve_move(1, action)
 
     assert game.num_hints == 7
     assert game.turn == 1
-    for i in range(game.NUMCARDS):
+    for i in range(len(game.deck)):
         card = game.deck[i]
         if i in game.player_hands[0] and card[1] == 1:
-            assert game.player_hints[i] == [None, 1]
+            assert game.player_hints[i] == (None, 1)
         else:
-            assert game.player_hints[i] == [None, None]
+            assert game.player_hints[i] == (None, None)
 
 def test_critical_cards(setup):
     """Test critical_cards
@@ -226,7 +225,7 @@ def test_critical_cards(setup):
     assert (0,5) in game.dead_cards
     assert (0,5) not in game.critical_cards
 
-    for _ in range(hs.Board.MAXRANK+1):
+    for _ in hs.RANKS:
         action = (hs.PLAY, 0, 1)
         game.resolve_move(1, action)
 
@@ -238,5 +237,5 @@ def test_playable_cards(setup):
     game = hs.Board(5, setup)
     game.setup()
 
-    for colour in range(game.MAXCOLOUR + 1):
+    for colour in hs.COLOURS:
         assert (colour, 1) in game.playable_cards

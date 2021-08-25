@@ -5,60 +5,66 @@ that implement hanabi strategies.
 """
 
 import random
+from typing import List, Tuple, Set
+from collections import namedtuple
 
-# Constants
-PLAY = 0
-DISCARD = 1
-HINTCOLOUR = 2
-HINTRANK = 3
+# Define player action types
+ActionType = int
+ACTION_TYPES = [PLAY, DISCARD, HINTCOLOUR, HINTRANK] = range(4)
+Action = Tuple[ActionType, int, int]
+
+# Define card colours and ranks
+COLOURS = [WHITE, YELLOW, GREEN, BLUE, RED] = range(5)
+RANKS = [ONE, TWO, THREE, FOUR, FIVE] = range(1, 6)
+
+# Map number of card in hand to number of players in game
+HANDSIZE = {2: 5, 3: 5, 4: 4, 5: 4}
+
+# Number of copies in deck for each card
+RANKCOUNTS = {ONE: 3, TWO: 2, THREE: 2, FOUR: 2, FIVE: 1}
+CARDCOUNTS = {(colour, rank): RANKCOUNTS[rank] for colour in COLOURS for rank in RANKS}
+
+Card = namedtuple("Card", ["colour", "rank"])
+Hint = namedtuple("Hint", ["colour", "rank"])
 
 
 class Board:
-    """Board implements Hanabi game logic"""
+    """
+    The board represents the Hanabi game state. The game state initializes empty,
+    and should be initialized for before the game start.
+    """
 
     MAXHINTS = 8
     MAXSTRIKES = 3
-    MAXCOLOUR = 4
-    MAXRANK = 5
     NUMCARDS = 50
 
-    # Map number of card in hand to number of players in game
-    HANDSIZE = {2: 5, 3: 5, 4: 4, 5: 4}
-
-    # Map number of duplicates of a card for each given rank
-    CARDCOUNTS = {1: 3, 2: 2, 3: 2, 4: 2, 5: 1}
-
-    def __init__(self, num_players, deck=None):
-        """
-        Constructor for the GameState class
-        :param num_players: integer indicating the number of players in this game
-        :param deck: optional parameter, a deck of cards as a list of tuples
-        """
+    def __init__(self, num_players: int, deck: List[Card] = None) -> None:
+        """Constructor for the Board class"""
 
         self.game_over = False
 
         # game constants
         self.num_hints = self.MAXHINTS
+        self.num_strikes = 0
         self.num_players = num_players
-        self.handsize = self.HANDSIZE[self.num_players]
+        self.handsize = HANDSIZE[self.num_players]
+        self.bonus_turns = num_players
+        self.num_cards = 0
 
-        # board data
+        # initialize game state data
         self.strikes = 0
         self.score = 0
         self.turn = 0
-        self.bonus_turns = num_players
         self.index = 0
         self.deck = deck
-        self.fireworks = [0 for _ in range(self.MAXCOLOUR + 1)]
+        self.fireworks = [0 for _ in COLOURS]
         self.discard_pile = {
-            (colour, rank): 0
-            for colour in range(self.MAXCOLOUR + 1)
-            for rank in range(1, self.MAXRANK + 1)
+            Card(colour, rank): 0 for colour in COLOURS for rank in RANKS
         }
 
-        # player hands contain the index to the card in the deck
+        # initialize player hands and hint data
         self.player_hands = [[] for _ in range(self.num_players)]
-        self.player_hints = [[None, None] for _ in range(self.NUMCARDS)]
+        self.player_hints = []
 
         # data for faster bookkeeping
         self.action_history = []
@@ -66,46 +72,45 @@ class Board:
         self.dead_cards = set()
         self.critical_cards = set()
         self.num_discarded = 0
-        self.cards_on_table = {
-            (colour, rank): self.CARDCOUNTS[rank]
-            for colour in range(self.MAXCOLOUR + 1)
-            for rank in range(1, self.MAXRANK + 1)
-        }
 
-    def setup(self):
+    def setup(self) -> None:
         """Generate deck and deal cards"""
+
         if not self.deck:
             self.generate_deck()
-
-        # Find all critical cards
         card_deck = [self.deck[i] for i in range(len(self.deck))]
 
-        for card in card_deck:
-            if self.CARDCOUNTS[card[1]] == 1:
-                self.critical_cards.add(card)
+        # Find all critical cards
+        self.critical_cards = {card for card in card_deck if CARDCOUNTS[card] == 1}
+
+        # Create card hints
+        self.player_hints = [(None, None) for _ in range(len(self.deck))]
 
         self.deal()
 
-    def generate_deck(self):
+    def generate_deck(self) -> None:
         """Generate a shuffled deck of Hanabi cards"""
+
         deck = [
-            (colour, rank)
-            for colour in range(self.MAXCOLOUR + 1)
-            for rank in range(1, self.MAXRANK + 1)
-            for _ in range(self.CARDCOUNTS[rank])
+            Card(colour, rank)
+            for colour in COLOURS
+            for rank in RANKS
+            for _ in range(CARDCOUNTS[(colour, rank)])
         ]
         random.shuffle(deck)
         self.deck = deck
 
-    def deal(self):
+    def deal(self) -> None:
         """Deal cards from deck into player hands at start of game"""
-        for _ in range(self.HANDSIZE[self.num_players]):
+
+        for _ in range(self.handsize):
             for j in range(self.num_players):
                 self.draw(j)
 
-    def draw(self, player):
+    def draw(self, player: int) -> None:
         """Draw a card for player"""
-        if self.index == self.NUMCARDS:
+
+        if self.index == len(self.deck):
             self.bonus_turns -= 1
             if self.bonus_turns == 0:
                 self.game_over = True
@@ -114,58 +119,45 @@ class Board:
         self.player_hands[player].append(self.index)
         self.index += 1
 
-    def resolve_move(self, player, action_attempt):
-        """Play out one move by a given player
-        :param action_attempt: This is the action that the player at move
-                intends to play.
-        """
+    def resolve_move(self, player: int, action_attempt: Action) -> Action:
+        """Play out one move by a given player"""
 
         action_type, target, value = action_attempt
 
         if action_type == PLAY:
             action = self.play(player, target, value)
-
         elif action_type == DISCARD:
             if self.num_hints < 8:
                 self.num_hints += 1
             action = self.discard(player, target)
-
         elif action_type == HINTCOLOUR:
             assert player != target
             assert self.num_hints > 0
             self.hint_colour(target, value)
             action = (HINTCOLOUR, value)
-
         elif action_type == HINTRANK:
             assert player != target
             assert self.num_hints > 0
             self.hint_rank(target, value)
             action = (HINTRANK, value)
-
         else:
             raise ValueError("Invalid action type")
 
         self.action_history.append(action)
-        if self.strikes == self.MAXSTRIKES:
+        if self.num_strikes == self.MAXSTRIKES:
             self.game_over = True
 
         self.turn += 1
 
-    def play(self, player, target, value):
-        """Play a card
-
-        Parameters:
-            - player int: player id
-            - target int: index of card in player's hand
-            - value  int: colour of firework
-        """
+    def play(self, player: int, target: int, colour: int) -> Action:
+        """Play a card"""
 
         card_index = self.player_hands[player][target]
         card = self.deck[card_index]
         action = (PLAY, card_index, None)
 
         # If card is illegal, discard with strike
-        if card[0] != value or card[1] != self.fireworks[value] + 1:
+        if card.colour != colour or card.rank != self.fireworks[colour] + 1:
             # Discard the card without hint
             self.discard(player, target)
             self.strikes += 1
@@ -173,7 +165,7 @@ class Board:
 
         # Play the card
         self.player_hands[player].pop(target)
-        self.fireworks[value] += 1
+        self.fireworks[colour] += 1
         self.played_cards.add(card)
         self.score += 1
         self.draw(player)
@@ -181,17 +173,13 @@ class Board:
             self.critical_cards.remove(card)
 
         # A hint is obtained if the firework is completed
-        if self.fireworks[value] == self.MAXRANK and self.num_hints < 8:
+        if self.fireworks[colour] == FIVE and self.num_hints < 8:
             self.num_hints += 1
 
         return action
 
-    def discard(self, player, target):
-        """Discard a card
-
-        :param player: player id
-        :param target: index of card in player's hand
-        """
+    def discard(self, player: int, target: int) -> Action:
+        """Discard a card"""
 
         # remove card from hand
         card_index = self.player_hands[player][target]
@@ -204,7 +192,7 @@ class Board:
         self.num_discarded += 1
 
         num_discarded = self.discard_pile[card]
-        num_left = self.CARDCOUNTS[card[1]] - num_discarded
+        num_left = CARDCOUNTS[card] - num_discarded
         if num_left == 1:
             self.critical_cards.add(card)
 
@@ -214,43 +202,37 @@ class Board:
 
         return (DISCARD, card_index)
 
-    def hint_any(self, player, value, hint_type):
-        """Provide a hint to a player
+    def hint_colour(self, player: int, value: int) -> None:
+        """Provide a colour hint to a player"""
 
-        :param player: player to receive hint
-        :param value: the colour or rank to hint
-        :hint type: 0 indicates colour hint, 1 indicates rank hint
-        """
         self.num_hints -= 1
-
         for index in self.player_hands[player]:
             card = self.deck[index]
-            if card[hint_type] == value:
-                self.player_hints[index][hint_type] = value
+            if card.colour == value:
+                _, rank = self.player_hints[index]
+                self.player_hints[index] = Hint(value, rank)
 
-    def hint_colour(self, player, value):
-        """Provide a colour hint to a player
-
-        :param player: index of player receiving hint
-        :param value: colour to hint
-        """
-        self.hint_any(player, value, 0)
-
-    def hint_rank(self, player, value):
+    def hint_rank(self, player: int, value: int) -> None:
         """Provide a rank hint to a player
 
         :param player: index of player receiving hint
         :param value: rank to hint
         """
-        self.hint_any(player, value, 1)
+
+        self.num_hints -= 1
+        for index in self.player_hands[player]:
+            card = self.deck[index]
+            if card.rank == value:
+                colour, _ = self.player_hints[index]
+                self.player_hints[index] = Hint(colour, value)
 
     @property
-    def playable_cards(self):
+    def playable_cards(self) -> Set[namedtuple]:
         """Returns a set of all playable cards"""
 
         playable_cards = set()
         for colour, rank in enumerate(self.fireworks):
-            if rank + 1 <= self.MAXRANK:
+            if rank + 1 <= FIVE:
                 playable_cards.add((colour, rank + 1))
 
         return playable_cards

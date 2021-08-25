@@ -27,13 +27,13 @@ class Agent:
         playable_cards = game.playable_cards
         for index, card in enumerate(hand):
             if card in playable_cards:
-                action = (hs.PLAY, index, card[0])
+                action = (hs.PLAY, index, card.colour)
                 return action
 
         # Try to discard given sufficient velocity
         discard_threshold = (
             game.NUMCARDS
-            - (game.MAXCOLOUR + 1) * (game.MAXRANK)
+            - len(hs.COLOURS) * len(hs.RANKS)
             - (game.num_players * game.handsize)
         )
 

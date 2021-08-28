@@ -239,3 +239,11 @@ def test_playable_cards(setup):
 
     for colour in hs.COLOURS:
         assert (colour, 1) in game.playable_cards
+
+def test_log(setup):
+    """Test that log is generated correctly"""
+
+    game = hs.Board(5)
+    game.setup()
+
+    game.save_log()

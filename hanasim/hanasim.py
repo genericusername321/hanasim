@@ -4,13 +4,14 @@ hanasim aims to be a fast hanabi engine to run simulations for user agents
 that implement hanabi strategies.
 """
 
+import json
 import random
 from typing import List, Tuple, Set
 from collections import namedtuple
 
 # Define player action types
 ActionType = int
-ACTION_TYPES = [PLAY, DISCARD, HINTCOLOUR, HINTRANK] = range(4)
+ACTION_TYPES = [PLAY, DISCARD, HINTCOLOUR, HINTRANK, ENDGAME] = range(5)
 Action = Tuple[ActionType, int, int]
 
 # Define card colours and ranks
@@ -103,8 +104,8 @@ class Board:
     def deal(self) -> None:
         """Deal cards from deck into player hands at start of game"""
 
-        for _ in range(self.handsize):
-            for j in range(self.num_players):
+        for j in range(self.num_players):
+            for _ in range(self.handsize):
                 self.draw(j)
 
     def draw(self, player: int) -> None:
@@ -114,6 +115,7 @@ class Board:
             self.bonus_turns -= 1
             if self.bonus_turns == 0:
                 self.game_over = True
+                self.action_history.append((ENDGAME, player, 1))
             return
 
         self.player_hands[player].append(self.index)
@@ -134,7 +136,7 @@ class Board:
             assert player != target
             assert self.num_hints > 0
             self.hint_colour(target, value)
-            action = (HINTCOLOUR, value)
+            action = (HINTCOLOUR, target, value)
         elif action_type == HINTRANK:
             assert player != target
             assert self.num_hints > 0
@@ -145,6 +147,7 @@ class Board:
 
         self.action_history.append(action)
         if self.num_strikes == self.MAXSTRIKES:
+            self.action_history.append((ENDGAME, player, 2))
             self.game_over = True
 
         self.turn += 1
@@ -154,7 +157,7 @@ class Board:
 
         card_index = self.player_hands[player][target]
         card = self.deck[card_index]
-        action = (PLAY, card_index, None)
+        action = (PLAY, card_index, 0)
 
         # If card is illegal, discard with strike
         if card.colour != colour or card.rank != self.fireworks[colour] + 1:
@@ -175,6 +178,9 @@ class Board:
         # A hint is obtained if the firework is completed
         if self.fireworks[colour] == FIVE and self.num_hints < 8:
             self.num_hints += 1
+
+        if self.score == 25:
+            self.game_over = True
 
         return action
 
@@ -200,7 +206,7 @@ class Board:
             self.critical_cards.remove(card)
             self.dead_cards.add(card)
 
-        return (DISCARD, card_index)
+        return (DISCARD, card_index, 0)
 
     def hint_colour(self, player: int, value: int) -> None:
         """Provide a colour hint to a player"""
@@ -236,3 +242,29 @@ class Board:
                 playable_cards.add((colour, rank + 1))
 
         return playable_cards
+
+    def save_log(self) -> None:
+        """Save the game to a JSON file that can be visualized on hanab.live.
+        Example of the JSON file format can be found on:
+        https://raw.githubusercontent.com/Zamiell/hanabi-live/master/misc/example_game_with_comments.jsonc
+        """
+
+        log = dict()
+        log["players"] = list()
+        for player_id in range(self.num_players):
+            log["players"].append("player" + str(player_id))
+
+        log["deck"] = list()
+        for card in self.deck:
+            log["deck"].append({"suitIndex": card.colour, "rank": card.rank})
+
+        log["actions"] = list()
+        for actions in self.action_history:
+            log["actions"].append(
+                {"type": actions[0], "target": actions[1], "value": actions[2]}
+            )
+
+        log["options"] = {"emptyClues": True}
+
+        with open("log.json", "w") as outfile:
+            outfile.write(json.dumps(log, indent=4))

@@ -3,3 +3,4 @@ venv/
 *.log
 *.py[cod]
 .ipynb_checkpoints/
+*.json

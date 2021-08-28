@@ -5,13 +5,12 @@ TODO:
     - [ ] Make player_hands private and implement get_hand() method.
         The get_hand method should check that a player cannot request 
         their own hand!
-    - [ ] Implement JSON dump of action history to visualize games on
+    - [x] Implement JSON dump of action history to visualize games on
         Hanab.live
-    - [ ] Expand scope of unit tests
-    - [ ] Get more statistics from game more, and visualize statistics in 
-        Jupyter notebook
-    - [ ] Card as named tuple
+    - [ ] Expand scope of unit tests and introduce test coverage statistics
+    - [ ] Get more statistics from game and visualize statistics in Jupyter notebook
     - [x] Implement main script
+    - [ ] Fix critical cards calculator
 
 - [ ] Bots:
     - [ ] Implement Hanabi bot using Hyphen-ated conventions

@@ -8,8 +8,8 @@ def setup():
 
     deck = [
         hs.Card(colour, rank)
-        for rank in hs.RANKS
         for colour in hs.COLOURS
+        for rank in hs.RANKS
     ]
 
     for _ in range(50 - len(hs.COLOURS) * len(hs.RANKS)):
@@ -100,21 +100,21 @@ def test_draw_empty(setup):
 def test_play_success(setup):
     """Test playing a card"""
     # Setup game
-    game = hs.Board(5, setup)
-    game.deal()
+    game = hs.Board(3, setup)
+    game.setup()
     game.num_hints = 4
 
     # Each player plays a card
     for rank in hs.RANKS:
-        for colour in hs.COLOURS:
+        for colour in range(3):
             action = (hs.PLAY, 0, colour)
             game.resolve_move(colour, action)
 
-            assert len(game.player_hands[colour]) == 4
+            assert len(game.player_hands[colour]) == game.handsize
             assert game.fireworks[colour] == rank
-            assert game.turn == (rank - 1) * len(hs.COLOURS) + colour + 1
+            assert game.turn == (rank - 1) * 3 + colour + 1
 
-    assert game.num_hints == 8
+    assert game.num_hints == 7
 
 
 def test_play_fail(setup):
@@ -129,7 +129,7 @@ def test_play_fail(setup):
 
     assert game.fireworks[0] == 0
     assert game.strikes == 1
-    assert game.player_hands[0] == [0, 10, 15, 20]
+    assert game.player_hands[0] == [0, 2, 3, 20]
     assert game.discard_pile[(0, 2)] == 1
     assert game.num_hints == 0
     assert game.turn == 1
@@ -146,7 +146,7 @@ def test_discard(setup):
     game.resolve_move(0, action)
 
     assert game.num_hints == 1
-    assert game.player_hands[0] == [5, 10, 15, 20]
+    assert game.player_hands[0] == [1, 2, 3, 20]
     assert game.discard_pile[(0, 1)] == 1
 
 
@@ -160,7 +160,7 @@ def test_discard_maxhints(setup):
     game.resolve_move(0, action)
 
     assert game.num_hints == 8
-    assert game.player_hands[0] == [5, 10, 15, 20]
+    assert game.player_hands[0] == [1, 2, 3, 20]
     assert game.discard_pile[(0, 1)] == 1
     assert game.turn == 1
 
@@ -202,14 +202,13 @@ def test_hint_rank(setup):
         else:
             assert game.player_hints[i] == (None, None)
 
-def test_critical_cards(setup):
+def test_critical_cards_discard(setup):
     """Test critical_cards
         - Verify that cards are added to critical cards when only one copy
           remains
-        - Verify that cards are removed from critical cards when played
     """
 
-    game = hs.Board(5, setup)
+    game = hs.Board(3, setup)
     game.setup()
 
     action = (hs.DISCARD, 1, None)
@@ -218,7 +217,7 @@ def test_critical_cards(setup):
 
     action = (hs.DISCARD, 1, None)
     game.resolve_move(1, action)
-    assert (1,2) in game.critical_cards
+    assert hs.Card(1,2) in game.critical_cards
 
     action = (hs.DISCARD, 3, None)
     game.resolve_move(0, action)
@@ -231,6 +230,19 @@ def test_critical_cards(setup):
 
     assert (1,5) not in game.critical_cards
 
+def test_critical_cards_play(setup):
+    """ Test critical_cards
+        - Verify that cards are removed when played
+    """
+    game = hs.Board(3, setup)
+    game.setup()
+    
+    for _ in hs.RANKS:
+        action = (hs.PLAY, 0, 1)
+        game.resolve_move(0, action)
+
+    assert hs.Card(0, 5) not in game.critical_cards
+
 def test_playable_cards(setup):
     """Test that playable_cards property"""
 
@@ -242,6 +254,7 @@ def test_playable_cards(setup):
 
 def test_log(setup):
     """Test that log is generated correctly"""
+
 
     game = hs.Board(5)
     game.setup()

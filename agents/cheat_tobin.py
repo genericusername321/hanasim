@@ -23,12 +23,17 @@ class Agent:
         indices = game.player_hands[self.player_id]
         hand = [game.deck[i] for i in indices]
 
-        # Find playable cards
+        # Try to play a card
         playable_cards = game.playable_cards
         for index, card in enumerate(hand):
             if card in playable_cards:
                 action = (hs.PLAY, index, card.colour)
                 return action
+
+        # Hint if num hints are full
+        if game.num_hints == 8:
+            action = (hs.HINTCOLOUR, (self.player_id + 1) % game.num_players, 0)
+            return action
 
         # Try to discard given sufficient velocity
         discard_threshold = (

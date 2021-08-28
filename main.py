@@ -31,9 +31,12 @@ if __name__ == "__main__":
     num_players = 5
 
     pool_obj = multiprocessing.Pool()
+    tic = time.perf_counter()
     scores = np.array(
         pool_obj.map(play_game, [num_players for _ in range(N)], chunksize=100)
     )
+    toc = time.perf_counter()
 
     df = pd.DataFrame({"Scores": scores})
     print(df.describe())
+    print(f"Time elapsed: {1000*(toc-tic)} ms")

@@ -2,15 +2,12 @@ import pytest
 import random
 import hanasim.hanasim as hs
 
+
 @pytest.fixture()
 def setup():
     """Create a pre-defined deck where the cards are in known order"""
 
-    deck = [
-        hs.Card(colour, rank)
-        for colour in hs.COLOURS
-        for rank in hs.RANKS
-    ]
+    deck = [hs.Card(colour, rank) for colour in hs.COLOURS for rank in hs.RANKS]
 
     for _ in range(50 - len(hs.COLOURS) * len(hs.RANKS)):
         deck.append(hs.Card(0, 1))
@@ -202,10 +199,11 @@ def test_hint_rank(setup):
         else:
             assert game.player_hints[i] == (None, None)
 
+
 def test_critical_cards_discard(setup):
     """Test critical_cards
-        - Verify that cards are added to critical cards when only one copy
-          remains
+    - Verify that cards are added to critical cards when only one copy
+      remains
     """
 
     game = hs.Board(3, setup)
@@ -213,35 +211,57 @@ def test_critical_cards_discard(setup):
 
     action = (hs.DISCARD, 1, None)
     game.resolve_move(0, action)
-    assert (0,2) in game.critical_cards
+    assert (0, 2) in game.critical_cards
 
     action = (hs.DISCARD, 1, None)
     game.resolve_move(1, action)
-    assert hs.Card(1,2) in game.critical_cards
+    assert hs.Card(1, 2) in game.critical_cards
 
     action = (hs.DISCARD, 3, None)
     game.resolve_move(0, action)
-    assert (0,5) in game.dead_cards
-    assert (0,5) not in game.critical_cards
+    assert (0, 5) in game.dead_cards
+    assert (0, 5) not in game.critical_cards
 
     for _ in hs.RANKS:
         action = (hs.PLAY, 0, 1)
         game.resolve_move(1, action)
 
-    assert (1,5) not in game.critical_cards
+    assert (1, 5) not in game.critical_cards
+
+
+def test_dead_cards(setup):
+    """Test critical cards
+    - Verify that cards are added to dead card set when smaller cards are dead
+    """
+    deck = [
+        hs.Card(colour, rank)
+        for colour in hs.COLOURS
+        for rank in hs.RANKS
+        for _ in range(hs.CARDCOUNTS[hs.Card(colour, rank)])
+    ]
+    game = hs.Board(3, deck)
+    game.setup()
+
+    action = (hs.DISCARD, 0, 0)
+    for _ in range(3):
+        game.resolve_move(0, action)
+
+    for rank in hs.RANKS:
+        assert hs.Card(0, rank) in game.dead_cards
 
 def test_critical_cards_play(setup):
-    """ Test critical_cards
-        - Verify that cards are removed when played
+    """Test critical_cards
+    - Verify that cards are removed when played
     """
     game = hs.Board(3, setup)
     game.setup()
-    
+
     for _ in hs.RANKS:
         action = (hs.PLAY, 0, 1)
         game.resolve_move(0, action)
 
     assert hs.Card(0, 5) not in game.critical_cards
+
 
 def test_playable_cards(setup):
     """Test that playable_cards property"""
@@ -252,9 +272,9 @@ def test_playable_cards(setup):
     for colour in hs.COLOURS:
         assert (colour, 1) in game.playable_cards
 
+
 def test_log(setup):
     """Test that log is generated correctly"""
-
 
     game = hs.Board(5)
     game.setup()

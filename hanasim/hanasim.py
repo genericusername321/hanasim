@@ -203,8 +203,10 @@ class Board:
             self.critical_cards.add(card)
 
         if num_left == 0:
-            self.critical_cards.remove(card)
-            self.dead_cards.add(card)
+            colour, rank = card
+            for r in range(rank, RANKS[-1]+1):
+                self.critical_cards.discard(Card(colour, r))
+                self.dead_cards.add(Card(colour, r))
 
         return (DISCARD, card_index, 0)
 

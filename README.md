@@ -7,10 +7,10 @@ TODO:
         their own hand!
     - [x] Implement JSON dump of action history to visualize games on
         Hanab.live
-    - [ ] Expand scope of unit tests and introduce test coverage statistics
+    - [x] Expand scope of unit tests and introduce test coverage statistics
     - [ ] Get more statistics from game and visualize statistics in Jupyter notebook
     - [x] Implement main script
-    - [ ] Fix critical cards calculator
+    - [x] Fix critical and dead cards calculator
 
 - [ ] Bots:
     - [ ] Implement Hanabi bot using Hyphen-ated conventions

@@ -1,6 +1,6 @@
 import pytest
 import random
-import hanasim.hanasim as hs
+from ..hanasim import hanasim as hs
 
 
 @pytest.fixture()
@@ -248,6 +248,7 @@ def test_dead_cards(setup):
 
     for rank in hs.RANKS:
         assert hs.Card(0, rank) in game.dead_cards
+
 
 def test_critical_cards_play(setup):
     """Test critical_cards

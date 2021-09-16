@@ -1,6 +1,6 @@
-""" hanasim is a hanabi game engine
+""" hanasim
 
-hanasim aims to be a fast hanabi engine to run simulations for user agents
+hanasim aims to be a fast hanabi engine to run simulations for player agents
 that implement hanabi strategies.
 """
 

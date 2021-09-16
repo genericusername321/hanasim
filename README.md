@@ -1,5 +1,7 @@
 # hanasim
 
+Hanabi is a card game of incomplete information where players work together to attempt to play a set of cards in the right order. The catch is that any individual player can see everyone else's hand, but not their own. This project implements a python module to write and simulate hanabi strategies.
+
 TODO:
 - [ ] Implement game logic
     - [ ] Make player_hands private and implement get_hand() method.

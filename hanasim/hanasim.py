@@ -1,13 +1,14 @@
-""" hanasim
-
+""" 
 hanasim aims to be a fast hanabi engine to run simulations for player agents
 that implement hanabi strategies.
 """
 
+
 import json
 import random
-from typing import List, Tuple, Set
+from abc import ABC, abstractmethod
 from collections import namedtuple
+from typing import List, Tuple, Set
 
 # Define player action types
 ActionType = int
@@ -22,11 +23,34 @@ RANKS = [ONE, TWO, THREE, FOUR, FIVE] = range(1, 6)
 HANDSIZE = {2: 5, 3: 5, 4: 4, 5: 4}
 
 # Number of copies in deck for each card
-RANKCOUNTS = {ONE: 3, TWO: 2, THREE: 2, FOUR: 2, FIVE: 1}
-CARDCOUNTS = {(colour, rank): RANKCOUNTS[rank] for colour in COLOURS for rank in RANKS}
-
 Card = namedtuple("Card", ["colour", "rank"])
-Hint = namedtuple("Hint", ["colour", "rank"])
+RANKCOUNTS = {ONE: 3, TWO: 2, THREE: 2, FOUR: 2, FIVE: 1}
+CARDCOUNTS = {
+    Card(colour, rank): RANKCOUNTS[rank] for colour in COLOURS for rank in RANKS
+}
+
+
+class AbstractAgent(ABC):
+    """
+    AbstractAgent is an abstract class defining the interface a player agent
+    for the hanasim class must implement.
+    """
+
+    @abstractmethod
+    def draw(self, card: Card):
+        """draw a card from the deck and add it to the end of the hand"""
+
+    @abstractmethod
+    def remove(self, index: int) -> Card:
+        """remove a card from the hand. The card may be discarded or played"""
+
+    @abstractmethod
+    def receive_colour_hint(self, colour: int):
+        """receive a colour hint"""
+
+    @abstractmethod
+    def receive_rank_hint(self, rank: int):
+        """receive a rank hint"""
 
 
 class Board:
@@ -44,49 +68,45 @@ class Board:
 
         self.game_over = False
 
-        # game constants
-        self.num_hints = self.MAXHINTS
-        self.num_strikes = 0
+        # global game state
+        self.players = [0] * num_players
         self.num_players = num_players
         self.handsize = HANDSIZE[self.num_players]
         self.bonus_turns = num_players
-        self.num_cards = 0
 
         # initialize game state data
-        self.strikes = 0
+        self.num_hints = self.MAXHINTS
+        self.num_strikes = 0
         self.score = 0
         self.turn = 0
         self.index = 0
         self.deck = deck
-        self.fireworks = [0 for _ in COLOURS]
+        self.fireworks = [0] * len(COLOURS)
         self.discard_pile = {
             Card(colour, rank): 0 for colour in COLOURS for rank in RANKS
         }
-
-        # initialize player hands and hint data
-        self.player_hands = [[] for _ in range(self.num_players)]
-        self.player_hints = []
 
         # data for faster bookkeeping
         self.action_history = []
         self.played_cards = set()
         self.dead_cards = set()
         self.critical_cards = set()
-        self.num_discarded = 0
+        self.total_discarded = 0
+
+    def set_player(self, player: AbstractAgent, player_id: int) -> None:
+        """Assign a player to the player list"""
+        self.players[player_id] = player
 
     def setup(self) -> None:
         """Generate deck and deal cards"""
 
         if not self.deck:
             self.generate_deck()
-        card_deck = [self.deck[i] for i in range(len(self.deck))]
 
         # Find all critical cards
-        self.critical_cards = {card for card in card_deck if CARDCOUNTS[card] == 1}
+        self.critical_cards = {card for card in self.deck if CARDCOUNTS[card] == 1}
 
-        # Create card hints
-        self.player_hints = [(None, None) for _ in range(len(self.deck))]
-
+        # Deal cards to players
         self.deal()
 
     def generate_deck(self) -> None:
@@ -96,7 +116,7 @@ class Board:
             Card(colour, rank)
             for colour in COLOURS
             for rank in RANKS
-            for _ in range(CARDCOUNTS[(colour, rank)])
+            for _ in range(RANKCOUNTS[rank])
         ]
         random.shuffle(deck)
         self.deck = deck
@@ -108,17 +128,18 @@ class Board:
             for _ in range(self.handsize):
                 self.draw(j)
 
-    def draw(self, player: int) -> None:
+    def draw(self, player_id: int) -> None:
         """Draw a card for player"""
 
         if self.index == len(self.deck):
             self.bonus_turns -= 1
             if self.bonus_turns == 0:
                 self.game_over = True
-                self.action_history.append((ENDGAME, player, 1))
+                self.action_history.append((ENDGAME, player_id, 1))
             return
 
-        self.player_hands[player].append(self.index)
+        card = self.deck[self.index]
+        self.players[player_id].draw(card)
         self.index += 1
 
     def resolve_move(self, player: int, action_attempt: Action) -> Action:
@@ -128,20 +149,24 @@ class Board:
 
         if action_type == PLAY:
             action = self.play(player, target, value)
+
         elif action_type == DISCARD:
             if self.num_hints < 8:
                 self.num_hints += 1
             action = self.discard(player, target)
+
         elif action_type == HINTCOLOUR:
             assert player != target
             assert self.num_hints > 0
             self.hint_colour(target, value)
             action = (HINTCOLOUR, target, value)
+
         elif action_type == HINTRANK:
             assert player != target
             assert self.num_hints > 0
             self.hint_rank(target, value)
             action = (HINTRANK, value)
+
         else:
             raise ValueError("Invalid action type")
 
@@ -152,51 +177,50 @@ class Board:
 
         self.turn += 1
 
-    def play(self, player: int, target: int, colour: int) -> Action:
-        """Play a card"""
+    def play(self, player_id: int, target: int, colour: int) -> Action:
+        """Resolve a move where player_id plays a card from its hand."""
 
-        card_index = self.player_hands[player][target]
-        card = self.deck[card_index]
-        action = (PLAY, card_index, 0)
+        # Remove card from player's hand
+        card = self.players[player_id].remove(target)
+        self.draw(player_id)
+        action = (PLAY, card, colour)
 
         # If card is illegal, discard with strike
         if card.colour != colour or card.rank != self.fireworks[colour] + 1:
-            # Discard the card without hint
-            self.discard(player, target)
-            self.strikes += 1
+            self.num_strikes += 1
+            self.discard_pile[card] += 1
             return action
 
         # Play the card
-        self.player_hands[player].pop(target)
         self.fireworks[colour] += 1
         self.played_cards.add(card)
         self.score += 1
-        self.draw(player)
-        if card in self.critical_cards:
-            self.critical_cards.remove(card)
-
-        # A hint is obtained if the firework is completed
-        if self.fireworks[colour] == FIVE and self.num_hints < 8:
-            self.num_hints += 1
 
         if self.score == 25:
             self.game_over = True
 
+        # If the played card was critical, remove it from the critical card stack
+        if card in self.critical_cards:
+            self.critical_cards.remove(card)
+
+        # A hint is obtained if the firework is completed
+        if self.fireworks[colour] == FIVE and self.num_hints < self.MAXHINTS:
+            self.num_hints += 1
+
         return action
 
-    def discard(self, player: int, target: int) -> Action:
+    def discard(self, player_id: int, target: int) -> Action:
         """Discard a card"""
 
-        # remove card from hand
-        card_index = self.player_hands[player][target]
-        self.player_hands[player].pop(target)
+        # remove card from player hand and draw new card
+        card = self.players[player_id].remove(target)
+        self.draw(player_id)
 
         # move card onto discard pile
-        card = self.deck[card_index]
         self.discard_pile[card] += 1
-        self.draw(player)
-        self.num_discarded += 1
+        self.total_discarded += 1
 
+        # account for critical and dead cards after discount
         num_discarded = self.discard_pile[card]
         num_left = CARDCOUNTS[card] - num_discarded
         if num_left == 1:
@@ -204,23 +228,19 @@ class Board:
 
         if num_left == 0:
             colour, rank = card
-            for r in range(rank, RANKS[-1]+1):
+            for r in range(rank, RANKS[-1] + 1):
                 self.critical_cards.discard(Card(colour, r))
                 self.dead_cards.add(Card(colour, r))
 
-        return (DISCARD, card_index, 0)
+        return (DISCARD, card, 0)
 
-    def hint_colour(self, player: int, value: int) -> None:
+    def hint_colour(self, player_id: int, value: int) -> None:
         """Provide a colour hint to a player"""
 
         self.num_hints -= 1
-        for index in self.player_hands[player]:
-            card = self.deck[index]
-            if card.colour == value:
-                _, rank = self.player_hints[index]
-                self.player_hints[index] = Hint(value, rank)
+        self.players[player_id].receive_colour_hint(value)
 
-    def hint_rank(self, player: int, value: int) -> None:
+    def hint_rank(self, player_id: int, value: int) -> None:
         """Provide a rank hint to a player
 
         :param player: index of player receiving hint
@@ -228,11 +248,7 @@ class Board:
         """
 
         self.num_hints -= 1
-        for index in self.player_hands[player]:
-            card = self.deck[index]
-            if card.rank == value:
-                colour, _ = self.player_hints[index]
-                self.player_hints[index] = Hint(colour, value)
+        self.players[player_id].receive_rank_hint(value)
 
     @property
     def playable_cards(self) -> Set[namedtuple]:
@@ -244,29 +260,3 @@ class Board:
                 playable_cards.add((colour, rank + 1))
 
         return playable_cards
-
-    def save_log(self) -> None:
-        """Save the game to a JSON file that can be visualized on hanab.live.
-        Example of the JSON file format can be found on:
-        https://raw.githubusercontent.com/Zamiell/hanabi-live/master/misc/example_game_with_comments.jsonc
-        """
-
-        log = dict()
-        log["players"] = list()
-        for player_id in range(self.num_players):
-            log["players"].append("player" + str(player_id))
-
-        log["deck"] = list()
-        for card in self.deck:
-            log["deck"].append({"suitIndex": card.colour, "rank": card.rank})
-
-        log["actions"] = list()
-        for actions in self.action_history:
-            log["actions"].append(
-                {"type": actions[0], "target": actions[1], "value": actions[2]}
-            )
-
-        log["options"] = {"emptyClues": True}
-
-        with open("log.json", "w") as outfile:
-            outfile.write(json.dumps(log, indent=4))
